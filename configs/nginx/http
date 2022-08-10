@@ -1,0 +1,22 @@
+server {
+    listen 40080;
+    listen 40443 ssl;
+    include snippets/self-signed.conf;
+    root /root/dist;
+    index index.html;
+    location / {
+        add_header Cache-Control "no-cache";
+        include  /etc/nginx/mime.types;
+        try_files $uri $uri/ /index.html;
+    }
+
+    location /static {
+        expires 1y;
+        add_header Cache-Control "public";
+    }
+
+    location /api {
+        include proxy_params;
+        proxy_pass http://localhost:5000;
+    }
+}

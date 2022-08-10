@@ -1,0 +1,19 @@
+error_page 404 /index.html;
+server {
+   listen 443 ssl http2;
+   listen [::]:443 ssl http2;
+   server_name localhost;
+
+   ssl_certificate /etc/ssl/certs/localhost.crt;
+   ssl_certificate_key /etc/ssl/private/localhost.key;
+        
+   ssl_protocols TLSv1.2 TLSv1.1 TLSv1;
+    
+   server_name localhost;
+   location / {
+        root     /home/crm/kevicrm-frontend-v2.gi/dist/;
+        index    index.html index.htm;
+        include  /etc/nginx/mime.types;
+        try_files $uri $uri/ /index.html;
+    }
+}
