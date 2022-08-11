@@ -1,5 +1,9 @@
 from typing import List
+import typing
+import sqlalchemy as sqla
+
 from api.model.board import Board, BoardAllowedUser
+from api.model.list import BoardList
 from api.app import db
 
 from werkzeug.exceptions import Forbidden
@@ -84,3 +88,19 @@ def delete_board(current_user: User, board: Board):
         db.session.delete(board)
     else:
         raise Forbidden()
+
+
+def update_boardlists_position(
+    current_user: User, board: Board, data: typing.List[dict]
+):
+    if (
+        board.is_user_can_access(current_user.id) or
+        current_user.has_role("admin")
+    ):
+        for index, item in enumerate(data):
+            db.session.query(BoardList).filter(
+                sqla.and_(
+                    BoardList.id == item,
+                    BoardList.board_id == board.id
+                )
+            ).update({"position": index})

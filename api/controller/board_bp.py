@@ -35,7 +35,7 @@ def post_board():
     return board_schema.dump(board)
 
 
-@board_bp.route("board/<board_id>", methods=["PATCH"])
+@board_bp.route("/board/<board_id>", methods=["PATCH"])
 @jwt_required()
 def patch_board(board_id: int):
     updated_board = board_service.patch_board(
@@ -48,7 +48,7 @@ def patch_board(board_id: int):
     return board_schema.dump(updated_board)
 
 
-@board_bp.route("board/<board_id>", methods=["DELETE"])
+@board_bp.route("/board/<board_id>", methods=["DELETE"])
 @jwt_required()
 def delete_board(board_id: int):
     board_service.delete_board(current_user, Board.get_or_404(board_id))
@@ -56,9 +56,21 @@ def delete_board(board_id: int):
     return {}
 
 
-@board_bp.route("board/<board_id>", methods=["GET"])
+@board_bp.route("/board/<board_id>", methods=["GET"])
 @jwt_required()
 def get_board(board_id: int):
     return board_schema.dump(
         board_service.get_board(current_user, board_id)
     )
+
+
+@board_bp.route("/board/<board_id>/boardlists-order", methods=["PATCH"])
+@jwt_required()
+def patch_boardlists_order(board_id: int):
+    board_service.update_boardlists_position(
+        current_user,
+        Board.get_or_404(board_id),
+        request.json
+    )
+    db.session.commit()
+    return {}
