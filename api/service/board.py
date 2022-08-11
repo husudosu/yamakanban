@@ -91,7 +91,7 @@ def delete_board(current_user: User, board: Board):
 
 
 def update_boardlists_position(
-    current_user: User, board: Board, data: typing.List[dict]
+    current_user: User, board: Board, data: typing.List[int]
 ):
     if (
         board.is_user_can_access(current_user.id) or

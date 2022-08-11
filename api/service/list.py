@@ -61,7 +61,7 @@ def delete_board_list(current_user: User, board_list: BoardList):
 
 
 def update_cards_position(
-    current_user: User, board_list: BoardList, data: typing.List[dict]
+    current_user: User, board_list: BoardList, data: typing.List[int]
 ):
     if (
         board_list.board.is_user_can_access(current_user.id) or
@@ -69,5 +69,5 @@ def update_cards_position(
     ):
         for index, item in enumerate(data):
             db.session.query(Card).filter(
-                sqla.and_(Card.id == item["id"], Card.list_id == board_list.id)
+                sqla.and_(Card.id == item, Card.list_id == board_list.id)
             ).update({"position": index})
