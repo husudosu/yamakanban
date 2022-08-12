@@ -11,6 +11,7 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 from flask_jwt_extended import JWTManager
 from flask_mail import Mail
+from flask_compress import Compress
 
 from marshmallow.exceptions import ValidationError
 
@@ -21,6 +22,7 @@ migrate = Migrate()
 cors = CORS()
 jwt = JWTManager()
 mail = Mail()
+compress = Compress()
 
 
 def create_app() -> Flask:
@@ -55,6 +57,7 @@ def create_app() -> Flask:
 
     app.register_blueprint(api_bp)
 
+    compress.init_app(app)
     # @api_bp.after_request
     # def api_after_request(response):
     #     # jsonify all data from API route

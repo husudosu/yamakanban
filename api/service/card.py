@@ -4,7 +4,7 @@ from api.app import db
 from api.model import CardActivityEvent
 from api.model.user import User
 from api.model.list import BoardList
-from api.model.card import Card, CardActivity, CardComment, CardChecklist
+from api.model.card import Card, CardActivity, CardComment, CardChecklist, CardListChange
 
 
 def get_card(current_user: User, card_id: int) -> Card:
@@ -102,13 +102,16 @@ def patch_card(current_user: User, card: Card, data: dict) -> Card:
     ):
         for key, value in data.items():
             if key == "list_id" and card.list_id != value:
-                card.activities.append(
-                    CardActivity(
-                        user_id=current_user.id,
-                        event=CardActivityEvent.CARD_MOVE_TO_LIST.value,
-                        entity_id=value
+                activity = CardActivity(
+                    user_id=current_user.id,
+                    event=CardActivityEvent.CARD_MOVE_TO_LIST.value,
+                    entity_id=card.id,
+                    list_change=CardListChange(
+                        from_list_id=card.list_id,
+                        to_list_id=value,
                     )
                 )
+                card.activities.append(activity)
                 card.list_id = value
             elif hasattr(card, key):
                 setattr(card, key, value)

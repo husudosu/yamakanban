@@ -1,9 +1,10 @@
 from marshmallow import (Schema, ValidationError,
                          fields, validate, validates_schema, EXCLUDE)
 from marshmallow_sqlalchemy import SQLAlchemySchema
+from marshmallow_sqlalchemy.fields import Nested
 
 from api.model.board import Board
-from api.model.card import Card, CardComment
+from api.model.card import Card, CardComment, CardListChange
 from api.model.list import BoardList
 from ..model import user
 
@@ -83,7 +84,7 @@ class CardMemberSchema(SQLAlchemySchema):
     send_notification = fields.Boolean(required=True)
 
     user = fields.Nested(
-        UserSchema(only=("name", "email", "avatar_url",)),
+        UserSchema(only=("name", "email", "avatar_url", "username",)),
         dump_only=True
     )
 
@@ -101,6 +102,22 @@ class CardCommentSchema(SQLAlchemySchema):
         model = CardComment
 
 
+class CardListChangeSchema(SQLAlchemySchema):
+    id = fields.Integer(dump_only=True)
+    activity_id = fields.Integer(dump_only=True)
+    from_list_id = fields.Integer(dump_only=True)
+    to_list_id = fields.Integer(dump_only=True)
+
+    # FIXME: This just a workaround to get boardlist, find better solution!
+    from_list = fields.Nested(
+        Schema.from_dict({"title": fields.String(dump_only=True)}))
+    to_list = fields.Nested(
+        Schema.from_dict({"title": fields.String(dump_only=True)}))
+
+    class Meta:
+        model = CardListChange
+
+
 class CardActivitySchema(SQLAlchemySchema):
     id = fields.Integer(dump_only=True)
     card_id = fields.Integer()
@@ -113,9 +130,10 @@ class CardActivitySchema(SQLAlchemySchema):
     member = fields.Nested(CardMemberSchema, dump_only=True)
 
     user = fields.Nested(
-        UserSchema(only=("name", "email", "avatar_url",)),
+        UserSchema(only=("name", "email", "avatar_url", "username",)),
         dump_only=True
     )
+    list_change = Nested(CardListChangeSchema, dump_only=True)
 
 
 class CardSchema(SQLAlchemySchema):

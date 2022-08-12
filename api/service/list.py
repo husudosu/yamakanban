@@ -4,7 +4,7 @@ import sqlalchemy as sqla
 
 
 from api.app import db
-from api.model.card import Card
+from api.model.card import Card, CardListChange
 from api.model.user import User
 from api.model.list import BoardList
 from api.model.board import Board
@@ -55,6 +55,14 @@ def delete_board_list(current_user: User, board_list: BoardList):
         board_list.board.is_user_can_access(current_user.id) or
         current_user.has_role("admin")
     ):
+        # Make CardListChange event from_list_id, to_list_id to null
+        db.session.query(CardListChange).filter(
+            CardListChange.from_list_id == board_list.id
+        ).update({"from_list_id": None})
+        db.session.query(CardListChange).filter(
+            CardListChange.to_list_id == board_list.id
+        ).update({"to_list_id": None})
+
         db.session.delete(board_list)
     else:
         raise Forbidden()

@@ -33,15 +33,16 @@ class CardActivity(db.Model, BaseMixin):
         "CardListChange", cascade="all, delete-orphan", uselist=False
     )
     comment = sqla_orm.relationship(
-        "CardComment", cascade="all, delete-orphan", uselist=False)
+        "CardComment", cascade="all, delete-orphan", uselist=False,
+    )
     member = sqla_orm.relationship(
-        "CardMember", cascade="all, delete-orphan", uselist=False
+        "CardMember", cascade="all, delete-orphan", uselist=False,
     )
     checklist = sqla_orm.relationship(
-        "CardChecklist", cascade="all, delete-orphan", uselist=False
+        "CardChecklist", cascade="all, delete-orphan", uselist=False,
     )
     checklist_item = sqla_orm.relationship(
-        "ChecklistItem", cascade="all, delete-orphan", uselist=False
+        "ChecklistItem", cascade="all, delete-orphan", uselist=False,
     )
 
 

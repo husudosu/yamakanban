@@ -20,6 +20,7 @@ class Config:
     SQLALCHEMY_DATABASE_URI = \
         f"postgresql://{os.environ.get('POSTGRES_USER')}:{os.environ.get('POSTGRES_PASSWORD')}@localhost:5432/{os.environ.get('POSTGRES_DB')}"
     SQLALCHEMY_TRACK_MODIFICATIONS = False
+    SQLALCHEMY_ECHO = False
 
     # CORS settings
     CORS_SUPPORTS_CREDENTIALS = True
@@ -28,7 +29,7 @@ class Config:
     JWT_ACCESS_TOKEN_EXPIRES = timedelta(minutes=60)
     JWT_REFRESH_TOKEN_EXPIRES = timedelta(minutes=120)
     JWT_TOKEN_LOCATION = ["cookies"]
-    JWT_COOKIE_CSRF_PROTECT = True 
+    JWT_COOKIE_CSRF_PROTECT = True
     JWT_ACCESS_CSRF_HEADER_NAME = "X-CSRF-TOKEN-ACCESS"
     JWT_REFRESH_CSRF_HEADER_NAME = "X-CSRF-TOKEN-REFRESH"
     # Cookie
