@@ -188,7 +188,7 @@ def delete_card(current_user: User, card: Card):
         card.board_list.board.is_user_can_access(current_user.id) or
         current_user.has_role("admin")
     ):
-        card.delete()
+        db.session.delete(card)
     else:
         raise Forbidden()
 

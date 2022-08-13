@@ -158,7 +158,7 @@ class CardActivitySchema(SQLAlchemySchema):
         original_dump = copy.deepcopy(self.dump_fields)
         original_fields = copy.deepcopy(self.fields)
         original_load_fields = copy.deepcopy(self.load_fields)
-
+        retval = None
         if many:
             retval = []
             for entry in obj:
@@ -172,6 +172,8 @@ class CardActivitySchema(SQLAlchemySchema):
                 elif entry.event == CardActivityEvent.CARD_MOVE_TO_LIST.value:
                     self.remove_fields(("member", "comment",))
                 retval.append(super().dump(entry, many=False))
+        else:
+            retval = super().dump(obj, many=False)
 
         self.dump_fields = copy.deepcopy(original_dump)
         self.fields = copy.deepcopy(original_fields)
@@ -186,12 +188,12 @@ class CardSchema(SQLAlchemySchema):
 
     title = fields.String(required=True)
     description = fields.String()
-    due_date = fields.DateTime()
+    due_date = fields.DateTime(required=False)
     position = fields.Integer()
-    activities = fields.Nested(CardActivitySchema, many=True)
 
     class Meta:
         model = Card
+        unknown = EXCLUDE
 
 
 class BoardListSchema(SQLAlchemySchema):
@@ -204,7 +206,7 @@ class BoardListSchema(SQLAlchemySchema):
     cards = fields.Nested(
         CardSchema,
         many=True,
-        exclude=("activities",),
+        only=("id", "title", "position",),
         dump_only=True
     )
 
