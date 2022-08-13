@@ -1,6 +1,7 @@
 from flask import Blueprint, jsonify, request
 from flask_jwt_extended import jwt_required, current_user
 
+from time import sleep
 from api.app import db
 from api.model.card import Card, CardComment
 from api.model.list import BoardList
@@ -13,6 +14,7 @@ card_bp = Blueprint("card_bp", __name__)
 card_schema = CardSchema()
 card_comment_schema = CardCommentSchema()
 card_activity_schema = CardActivitySchema()
+
 
 @card_bp.route("/list/<list_id>/card", methods=["GET"])
 @jwt_required()
@@ -104,3 +106,12 @@ def delete_card_comment(comment_id: int):
     )
     db.session.commit()
     return {}
+
+
+@card_bp.route("/card/<card_id>/activities", methods=["GET"])
+@jwt_required()
+def get_card_activities(card_id: int):
+    return jsonify(card_activity_schema.dump(card_service.get_card_activities(
+        current_user,
+        Card.get_or_404(card_id)
+    ), many=True))

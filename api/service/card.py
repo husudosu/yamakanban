@@ -191,3 +191,12 @@ def delete_card(current_user: User, card: Card):
         card.delete()
     else:
         raise Forbidden()
+
+
+def get_card_activities(current_user: User, card: Card):
+    if (
+        card.board_list.board.is_user_can_access(current_user.id) or
+        current_user.has_role("admin")
+    ):
+        return card.activities
+    raise Forbidden()

@@ -1,12 +1,15 @@
+import copy 
+import typing
+
 from marshmallow import (Schema, ValidationError,
                          fields, validate, validates_schema, EXCLUDE)
 from marshmallow_sqlalchemy import SQLAlchemySchema
 from marshmallow_sqlalchemy.fields import Nested
 
 from api.model.board import Board
-from api.model.card import Card, CardComment, CardListChange
+from api.model.card import Card, CardActivity, CardComment, CardListChange
 from api.model.list import BoardList
-from ..model import user
+from ..model import CardActivityEvent, user
 
 
 class ResetPasswordSchema(Schema):
@@ -79,7 +82,7 @@ class UserSchema(SQLAlchemySchema):
 
 class CardMemberSchema(SQLAlchemySchema):
     id = fields.Integer(dump_only=True)
-    activity_id = fields.Integer(dump_only=True)
+    # activity_id = fields.Integer(dump_only=True)
     user_id = fields.Integer(dump_only=True)
     send_notification = fields.Boolean(required=True)
 
@@ -92,7 +95,7 @@ class CardMemberSchema(SQLAlchemySchema):
 class CardCommentSchema(SQLAlchemySchema):
     id = fields.Integer(dump_only=True)
     user_id = fields.Integer(dump_only=True)
-    activity_id = fields.Integer(dump_only=True, required=True)
+    # activity_id = fields.Integer(dump_only=True, required=True)
     comment = fields.String(required=True)
 
     created = fields.DateTime(dump_only=True)
@@ -104,7 +107,7 @@ class CardCommentSchema(SQLAlchemySchema):
 
 class CardListChangeSchema(SQLAlchemySchema):
     id = fields.Integer(dump_only=True)
-    activity_id = fields.Integer(dump_only=True)
+    # activity_id = fields.Integer(dump_only=True)
     from_list_id = fields.Integer(dump_only=True)
     to_list_id = fields.Integer(dump_only=True)
 
@@ -122,7 +125,7 @@ class CardActivitySchema(SQLAlchemySchema):
     id = fields.Integer(dump_only=True)
     card_id = fields.Integer()
     user_id = fields.Integer()
-    activity_on = fields.DateTime()
+    activity_on = fields.DateTime("%Y-%m-%d %H:%M:%S")
     entity_id = fields.Integer()
     event = fields.Integer(dump_only=True)
 
@@ -134,6 +137,46 @@ class CardActivitySchema(SQLAlchemySchema):
         dump_only=True
     )
     list_change = Nested(CardListChangeSchema, dump_only=True)
+
+    def remove_fields(self, exclude: typing.Tuple):
+        """Removes fields from schema to prevent unnecessary SQL calls"""
+        for i in exclude:
+            self.dump_fields.pop(i, None)
+            self.fields.pop(i, None)
+            self.load_fields.pop(i, None)
+
+    def dump(
+        self,
+        obj: typing.Union[typing.List[CardActivity], CardActivity],
+        *,
+        many: typing.Union[bool, None] = None
+    ):
+        """
+        Dumps relationship based on event.
+        Prevents marshmallow-sqlalchemy doing unnecessary SQL calls.
+        """
+        original_dump = copy.deepcopy(self.dump_fields)
+        original_fields = copy.deepcopy(self.fields)
+        original_load_fields = copy.deepcopy(self.load_fields)
+
+        if many:
+            retval = []
+            for entry in obj:
+                # Reload original stuff before removing anything.
+                self.dump_fields = copy.deepcopy(original_dump)
+                self.fields = copy.deepcopy(original_fields)
+                self.load_fields = copy.deepcopy(original_load_fields)
+
+                if entry.event == CardActivityEvent.CARD_COMMENT.value:
+                    self.remove_fields(("member", "list_change",))
+                elif entry.event == CardActivityEvent.CARD_MOVE_TO_LIST.value:
+                    self.remove_fields(("member", "comment",))
+                retval.append(super().dump(entry, many=False))
+
+        self.dump_fields = copy.deepcopy(original_dump)
+        self.fields = copy.deepcopy(original_fields)
+        self.load_fields = copy.deepcopy(original_load_fields)
+        return retval
 
 
 class CardSchema(SQLAlchemySchema):

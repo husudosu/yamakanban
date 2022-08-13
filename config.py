@@ -18,7 +18,7 @@ class Config:
     # SQLAlchemy settings
     # SQLALCHEMY_DATABASE_URI = "sqlite:///test.db"
     SQLALCHEMY_DATABASE_URI = \
-        f"postgresql://{os.environ.get('POSTGRES_USER')}:{os.environ.get('POSTGRES_PASSWORD')}@localhost:5432/{os.environ.get('POSTGRES_DB')}"
+        f"postgresql://{os.environ.get('POSTGRES_USER')}:{os.environ.get('POSTGRES_PASSWORD')}@{os.environ.get('POSTGRES_HOST')}/{os.environ.get('POSTGRES_DB')}"
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     SQLALCHEMY_ECHO = False
 
@@ -53,6 +53,10 @@ class Config:
     MAIL_USERNAME = os.environ.get("MAIL_USERNAME")
     MAIL_PASSWORD = os.environ.get("MAIL_PASSWORD")
     MAIL_DEFAULT_SENDER = os.environ.get("MAIL_DEFAULT_SENDER")
+
+    COMPRESS_MIMETYPES = ["application/json"]
+    COMPRESS_LEVEL = 6
+    COMPRESS_MIN_SIZE = 500
 
     # Allow anonymous to look users.
     VIEW_USER_AS_ANONYMOUS = strtobool(

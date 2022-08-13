@@ -15,6 +15,8 @@ from flask_compress import Compress
 
 from marshmallow.exceptions import ValidationError
 
+from werkzeug.middleware.profiler import ProfilerMiddleware
+
 from config import Config
 
 db = SQLAlchemy()
@@ -28,6 +30,11 @@ compress = Compress()
 def create_app() -> Flask:
     app = Flask(__name__)
     app.config.from_object(Config)
+    # app.wsgi_app = ProfilerMiddleware(
+    #     app.wsgi_app,
+    #     restrictions=[5],
+    #     profile_dir='./profile'
+    # )
 
     factory_cli = AppGroup("factory")
 
