@@ -1,7 +1,8 @@
 import typing
 from werkzeug.exceptions import Forbidden
 from api.app import db
-from api.model import CardActivityEvent
+from api.model import BoardPermission, CardActivityEvent
+from ..model.board import Board
 from api.model.user import User
 from api.model.list import BoardList
 from api.model.card import Card, CardActivity, CardComment, CardChecklist, CardListChange
@@ -59,7 +60,9 @@ def post_card(current_user: User, board_list: BoardList, data: dict) -> Card:
         Card: Card ORM object
     """
     if (
-        board_list.board.is_user_can_access(current_user.id) or
+        board_list.board.has_permission(
+            current_user.id, BoardPermission.CARD_EDIT
+        ) or
         current_user.has_role("admin")
     ):
         card = Card(owner_id=current_user.id, **data)
@@ -97,7 +100,9 @@ def patch_card(current_user: User, card: Card, data: dict) -> Card:
         Card: Updated card ORM object
     """
     if (
-        card.board_list.board.is_user_can_access(current_user.id) or
+        card.board_list.board.has_permission(
+            current_user.id, BoardPermission.CARD_EDIT
+        ) or
         current_user.has_role("admin")
     ):
         for key, value in data.items():
@@ -123,7 +128,9 @@ def post_card_comment(
     current_user: User, card: Card, data: dict
 ) -> CardActivity:
     if (
-        card.board_list.board.is_user_can_access(current_user.id) or
+        card.board_list.board.has_permission(
+            current_user.id, BoardPermission.CARD_COMMENT
+        ) or
         current_user.has_role("admin")
     ):
         comment = CardComment(user_id=current_user.id, **data)

@@ -104,3 +104,21 @@ def update_boardlists_position(
                     BoardList.board_id == board.id
                 )
             ).update({"position": index})
+
+
+def get_board_claims(current_user: User, board: Board) -> BoardAllowedUser:
+    """Gets board claims for current_user
+
+    Args:
+        current_user (User): Current logged in user
+        board (Board): Board ORM object
+
+    Returns:
+        BoardAllowedUser: Board allowed user object contains role/permission.
+    """
+    return BoardAllowedUser.query.filter(
+        sqla.and_(
+            BoardAllowedUser.board_id == board.id,
+            BoardAllowedUser.user_id == current_user.id,
+        )
+    ).first()

@@ -1,43 +1,31 @@
 
+import typing
 import sqlalchemy as sqla
 import sqlalchemy.orm as sqla_orm
 
 from api.app import db
-from . import BaseMixin, BoardPermissions
+from . import BaseMixin, BoardPermission
 
 
-class BoardPermission(db.Model, BaseMixin):
-    __tablename__ = "board_permission"
+class BoardRolePermission(db.Model, BaseMixin):
+    __tablename__ = "board_role_permission"
 
     id = sqla.Column(sqla.Integer, primary_key=True)
-    board_user_id = sqla.Column(
-        sqla.Integer, sqla.ForeignKey("board_allowed_user.id"))
-    permission_name = sqla.Column(sqla.String, nullable=False)
+    board_role_id = sqla.Column(sqla.Integer, sqla.ForeignKey("board_role.id"))
 
-    read = sqla.Column(sqla.Boolean, default=True, nullable=False)
-    update = sqla.Column(sqla.Boolean, default=True, nullable=False)
-    write = sqla.Column(sqla.Boolean, default=True, nullable=False)
-    delete = sqla.Column(sqla.Boolean, default=True, nullable=False)
+    name = sqla.Column(sqla.String, nullable=False)
+    allow = sqla.Column(sqla.Boolean, nullable=False, default=True)
 
-    @classmethod
-    def get_by_name(cls, board_user_id: int, name: str):
-        return cls.query.filter(
-            sqla.and_(
-                cls.board_user_id == board_user_id,
-                cls.permission_name == name,
-            )
-        ).first()
 
-    def __init__(self, **kwargs):
-        # Check logic of read update write permissions
-        if kwargs.get("read", False):
-            kwargs["read"] = False
-            kwargs["update"] = False
-            kwargs["write"] = False
-            kwargs["delete"] = False
-        for key, value in kwargs.items():
-            if hasattr(self, key):
-                setattr(self, key, value)
+class BoardRole(db.Model, BaseMixin):
+    __tablename__ = "board_role"
+    id = sqla.Column(sqla.Integer, primary_key=True)
+    board_id = sqla.Column(sqla.Integer, sqla.ForeignKey("board.id"))
+
+    name = sqla.Column(sqla.String, nullable=False)
+
+    permissions = sqla_orm.relationship(
+        "BoardRolePermission", cascade="all, delete-orphan")
 
 
 class BoardAllowedUser(db.Model, BaseMixin):
@@ -48,56 +36,22 @@ class BoardAllowedUser(db.Model, BaseMixin):
         sqla.Integer, sqla.ForeignKey("user.id"), nullable=False)
     board_id = sqla.Column(
         sqla.Integer, sqla.ForeignKey("board.id"), nullable=False)
-
-    permissions = sqla_orm.relationship(
-        "BoardPermission",
-        cascade="all, delete-orphan"
+    board_role_id = sqla.Column(
+        sqla.Integer, sqla.ForeignKey("board_role.id")
     )
+    is_owner = sqla.Column(sqla.Boolean, default=False, nullable=False)
+
     board = sqla_orm.relationship("Board", back_populates="board_users")
+    role = sqla_orm.relationship("BoardRole", uselist=False)
 
-    def __init__(self, **kwargs):
-        permissions = kwargs.pop("permissions", [])
-        permission_values = [item.value for item in BoardPermissions]
-
-        for permission in permissions:
-            if permission.get("permission_name") in permission_values:
-                self.permissions.append(BoardPermission(**permission))
-                permission_values.remove(permission["permission_name"])
-            else:
-                raise Exception(
-                    f"{permission.get('permission_name')} not exists on BoardPermissions enum!")
-        # If permission not created create it with read only
-        for permission in permission_values:
-            self.permissions.append(
-                BoardPermission(
-                    permission_name=permission,
-                    read=True,
-                )
+    def has_permission(self, permission: BoardPermission):
+        m = BoardRolePermission.query.filter(
+            sqla.and_(
+                BoardRolePermission.board_role_id == self.board_role_id,
+                BoardRolePermission.name == permission.value
             )
-        # Populate object itself
-        for key, value in kwargs.items():
-            if hasattr(self, key):
-                setattr(self, key, value)
-
-    def update(self, **kwargs):
-        permissions = kwargs.pop("permissions", [])
-        permission_values = [item.value for item in BoardPermissions]
-        self.update(**kwargs)
-
-        for permission in permissions:
-            p = BoardPermission.get_by_name(self.id, permission.get("permission_name"))
-            if p:
-                p.update(**permission)
-            elif permission.get("permission_name") in permission_values:
-                # Add if it's valid permission but not exists.
-                self.permissions.append(BoardPermission(**permission))
-            else:
-                raise Exception(
-                    f"{permission.get('permission_name')} not exists on BoardPermissions enum!")
-        # Update object.
-        for key, value in kwargs.items():
-            if hasattr(self, key):
-                setattr(self, key, value)        
+        ).first()
+        return m.allow if m else False
 
 
 class Board(db.Model, BaseMixin):
@@ -116,6 +70,11 @@ class Board(db.Model, BaseMixin):
         cascade="all, delete-orphan",
         back_populates="board"
     )
+    board_roles = sqla_orm.relationship(
+        "BoardRole",
+        cascade="all, delete-orphan"
+    )
+
     lists = sqla_orm.relationship(
         "BoardList",
         cascade="all, delete-orphan",
@@ -127,6 +86,16 @@ class Board(db.Model, BaseMixin):
         for key, value in kwargs.items():
             if hasattr(self, key):
                 setattr(self, key, value)
+        # Create default roles & permissions for board.
+        roles = create_default_roles(self)
+        # Create BoardAllowedUser entry for owner
+        self.board_users.append(
+            BoardAllowedUser(
+                user_id=self.owner_id,
+                is_owner=True,
+                role=roles[0]
+            )
+        )
 
     def is_user_can_access(self, user_id: int):
         """Is the user can access this board?
@@ -136,12 +105,78 @@ class Board(db.Model, BaseMixin):
         """
         if self.owner_id == user_id:
             return True
-        m = BoardAllowedUser.query.filter(
+        return True if BoardAllowedUser.query.filter(
+            sqla.and_(
+                BoardAllowedUser.board_id == self.id,
+                BoardAllowedUser.user_id == user_id
+            )
+        ).first() else False
+
+    def has_permission(
+        self,
+        user_id: int,
+        permission: BoardPermission
+    ):
+        if self.owner_id == user_id:
+            return True
+
+        m: BoardAllowedUser = BoardAllowedUser.query.filter(
             sqla.and_(
                 BoardAllowedUser.board_id == self.id,
                 BoardAllowedUser.user_id == user_id
             )
         ).first()
-        if m:
-            return True
-        return False
+
+        return False if not m else m.has_permission(permission)
+
+
+def create_default_roles(board: Board) -> typing.List[BoardRole]:
+    admin_role = BoardRole(name="Admin", board_id=board.id)
+    member_role = BoardRole(name="Member", board_id=board.id)
+    observer_role = BoardRole(name="Observer", board_id=board.id)
+
+    # Add all permission for admin role
+    for permission in BoardPermission:
+        admin_role.permissions.append(
+            BoardRolePermission(
+                name=permission.name,
+                allow=True
+            )
+        )
+        # Allow everything for members expect deleting board
+        member_role.permissions.append(
+            BoardRolePermission(
+                name=permission.name,
+                allow=permission != BoardPermission.BOARD_DELETE
+            )
+        )
+        # Disable everything for observer role, it has only view access
+        observer_role.permissions.append(
+            BoardRolePermission(
+                name=permission.name,
+                allow=False
+            )
+        )
+    board.board_roles.append(admin_role)
+    board.board_roles.append(member_role)
+    board.board_roles.append(observer_role)
+    return [admin_role, member_role, observer_role]
+
+
+def check_permission_integrity(board: Board):
+    """Checks if all permission object exists for board roles
+
+    Args:
+        board (Board): _description_
+    """
+    permission_names = [val.name for val in BoardPermission]
+    # TODO: Continue with this not done yet.
+    for role in board.board_roles:
+        current_permissions = [val.name for val in role.permissions]
+        # Delete permission not existing anymore.
+        for permission in current_permissions:
+            if permission not in permission_names:
+                pass
+        # Add non-existing permissions
+        for permission in p:
+            pass

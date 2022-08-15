@@ -31,13 +31,16 @@ class BaseMixin(object):
                 setattr(self, key, value)
 
 
-class BoardPermissions(enum.Enum):
-    CARD = "card"
-    CARD_LIST_ASSIGNMENT = "card.list.assign"
-    CARD_DESCRIPTION_UPDATE = "card.list.deassign"
+class BoardPermission(enum.Enum):
+    CARD_EDIT = "card.edit"
     CARD_COMMENT = "card.comment"
-    CARD_DUE_DATE = "card.due_date"
-    CARD_LABEL_ASSIGNMENT = "card.label.assign"
+    CARD_DELETE = "card.delete"
+    LIST_CREATE = "list.create"
+    LIST_EDIT = "list.edit"
+    LIST_DELETE = "list.delete"
+    BOARD_UPDATE = "board.update"
+    BOARD_DELETE = "board.delete"
+    BOARD_INVITE_MEMBER = "board.invite_member"
 
 
 class CardActivityEvent(RestEnum):

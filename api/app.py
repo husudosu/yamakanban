@@ -186,7 +186,7 @@ def create_app() -> Flask:
     def create_card(userid: int, boardlistid: int, count: int):
         from api.model.user import User
         from api.model.list import BoardList
-        from api.util.factory import create_card 
+        from api.util.factory import create_card
         usr = User.query.get(userid)
         if not usr:
             raise Exception("User not exists.")
@@ -217,6 +217,15 @@ def create_app() -> Flask:
         for _ in range(0, int(count)):
             db.session.add(create_comment(usr, card))
         db.session.commit()
+
+    @app.cli.command("check_permissions")
+    def check_permissions():
+        from api.model.board import Board
+        from api.model import BoardPermission
+        for board in Board.query.all():
+            for role in board.board_roles:
+                for permission in BoardPermission:
+                    pass
 
     app.cli.add_command(factory_cli)
 

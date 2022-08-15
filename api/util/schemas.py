@@ -1,4 +1,4 @@
-import copy 
+import copy
 import typing
 
 from marshmallow import (Schema, ValidationError,
@@ -6,7 +6,9 @@ from marshmallow import (Schema, ValidationError,
 from marshmallow_sqlalchemy import SQLAlchemySchema
 from marshmallow_sqlalchemy.fields import Nested
 
-from api.model.board import Board
+from api.model.board import (
+    Board, BoardAllowedUser, BoardRole, BoardRolePermission
+)
 from api.model.card import Card, CardActivity, CardComment, CardListChange
 from api.model.list import BoardList
 from ..model import CardActivityEvent, user
@@ -49,7 +51,7 @@ class UserSchema(SQLAlchemySchema):
     def get_roles_deserialize(self, obj):
         return obj
 
-    @validates_schema
+    @ validates_schema
     def validate_schema(self, data, **kwargs):
         errors = {}
         # Check if user exists
@@ -226,3 +228,33 @@ class BoardSchema(SQLAlchemySchema):
 
     class Meta:
         model = Board
+
+
+class BoardRolePermissionSchema(SQLAlchemySchema):
+    id = fields.Integer(dump_only=True)
+    name = fields.String(dump_only=True)
+    allow = fields.Boolean()
+
+    class Meta:
+        model = BoardRolePermission
+
+
+class BoardRoleSchema(SQLAlchemySchema):
+    id = fields.Integer(dump_only=True)
+    board_role_id = fields.Integer(dump_only=True)
+    name = fields.String(dump_only=True)
+    permissions = fields.Nested(BoardRolePermissionSchema, many=True)
+
+    class Meta:
+        model = BoardRole
+
+
+class BoardAllowedUserSchema(SQLAlchemySchema):
+    id = fields.Integer(dump_only=True)
+    user_id = fields.Integer(dump_only=True)
+    board_id = fields.Integer(dump_only=True)
+    is_owner = fields.Integer(dump_only=True)
+    role = fields.Nested(BoardRoleSchema)
+
+    class Meta:
+        model = BoardAllowedUser
