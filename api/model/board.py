@@ -23,6 +23,7 @@ class BoardRole(db.Model, BaseMixin):
     board_id = sqla.Column(sqla.Integer, sqla.ForeignKey("board.id"))
 
     name = sqla.Column(sqla.String, nullable=False)
+    is_admin = sqla.Column(sqla.Boolean, default=False, nullable=False)
 
     permissions = sqla_orm.relationship(
         "BoardRolePermission", cascade="all, delete-orphan")
@@ -99,18 +100,12 @@ class Board(db.Model, BaseMixin):
 
     def is_user_can_access(self, user_id: int):
         """Is the user can access this board?
-
         Args:
             user_id (int): User id
         """
         if self.owner_id == user_id:
             return True
-        return True if BoardAllowedUser.query.filter(
-            sqla.and_(
-                BoardAllowedUser.board_id == self.id,
-                BoardAllowedUser.user_id == user_id
-            )
-        ).first() else False
+        return True if self.get_board_user(user_id) else False
 
     def has_permission(
         self,
@@ -129,9 +124,26 @@ class Board(db.Model, BaseMixin):
 
         return False if not m else m.has_permission(permission)
 
+    def get_board_user(self, user_id: int) -> BoardAllowedUser:
+        """Gets board user.
+        Board user only exists when the user at least can observe the board
+
+        Args:
+            user_id (int): User id
+
+        Returns:
+            BoardAllowedUser: Board user if exists else None
+        """
+        return BoardAllowedUser.query.filter(
+            sqla.and_(
+                BoardAllowedUser.board_id == self.id,
+                BoardAllowedUser.user_id == user_id
+            )
+        ).first()
+
 
 def create_default_roles(board: Board) -> typing.List[BoardRole]:
-    admin_role = BoardRole(name="Admin", board_id=board.id)
+    admin_role = BoardRole(name="Admin", board_id=board.id, is_admin=True)
     member_role = BoardRole(name="Member", board_id=board.id)
     observer_role = BoardRole(name="Observer", board_id=board.id)
 
@@ -175,7 +187,7 @@ def check_permission_integrity():
         # Delete permission not exists anymore.
         for permission in current_permissions:
             if permission not in permission_names:
-                # We can remove for permission for all roles.
+                # We can remove permission for all roles.
                 db.session.query(BoardRolePermission).filter(
                     BoardRolePermission.name == permission
                 ).delete()

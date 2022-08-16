@@ -2,7 +2,7 @@ from typing import List
 import typing
 import sqlalchemy as sqla
 
-from api.model.board import Board, BoardAllowedUser
+from api.model.board import Board, BoardAllowedUser, BoardRole
 from api.model.list import BoardList
 from api.app import db
 
@@ -20,13 +20,12 @@ def get_user_boards(current_user: User) -> List[Board]:
     Returns:
         List[Board]: List of boards.
     """
-    # User own boards
-    boards = current_user.boards
     # Have acces to boards
-    access_boards = BoardAllowedUser.query.filter(
-        BoardAllowedUser.user_id == current_user.id)
-    for board in access_boards:
-        boards.append(board)
+    boards = []
+    for entry in BoardAllowedUser.query.filter(
+        BoardAllowedUser.user_id == current_user.id
+    ).all():
+        boards.append(entry.board)
     return boards
 
 
@@ -122,3 +121,32 @@ def get_board_claims(current_user: User, board: Board) -> BoardAllowedUser:
             BoardAllowedUser.user_id == current_user.id,
         )
     ).first()
+
+
+def get_board_roles(
+    current_user: User, board: Board
+) -> typing.List[BoardRole]:
+    """Gets board roles
+
+    Args:
+        current_user (User): Current logged in user
+        board (Board): Board
+
+    Raises:
+        Forbidden: _description_
+
+    Returns:
+        typing.List[BoardRole]: _description_
+    """
+    board_user = board.get_board_user(current_user.id)
+    if (board_user or current_user.has_role("admin")):
+        return board.board_roles
+    raise Forbidden()
+
+
+def invite_member(
+    current_user: User, board: Board,
+    new_member: User, new_member_role: BoardRole
+):
+    board_user = board.get_board_user(current_user.id)
+    # TODO: Continue from here.

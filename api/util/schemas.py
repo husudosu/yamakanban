@@ -51,7 +51,7 @@ class UserSchema(SQLAlchemySchema):
     def get_roles_deserialize(self, obj):
         return obj
 
-    @ validates_schema
+    @validates_schema
     def validate_schema(self, data, **kwargs):
         errors = {}
         # Check if user exists
@@ -242,8 +242,10 @@ class BoardRolePermissionSchema(SQLAlchemySchema):
 class BoardRoleSchema(SQLAlchemySchema):
     id = fields.Integer(dump_only=True)
     board_role_id = fields.Integer(dump_only=True)
-    name = fields.String(dump_only=True)
-    permissions = fields.Nested(BoardRolePermissionSchema, many=True)
+    name = fields.String()
+    is_admin = fields.Boolean(missing=False)
+    permissions = fields.Nested(
+        BoardRolePermissionSchema, many=True, dump_only=True)
 
     class Meta:
         model = BoardRole
