@@ -1,7 +1,10 @@
+
+import sqlalchemy as sqla
 from flask_jwt_extended import current_user, jwt_required
 
-from flask import Blueprint, request, jsonify
-from api.model.board import Board
+from flask import Blueprint, request, jsonify, abort
+from api.model.board import Board, BoardAllowedUser, BoardRole
+from ..model.user import User
 from api.service import board as board_service
 from api.util.schemas import BoardAllowedUserSchema, BoardSchema
 
@@ -84,3 +87,37 @@ def get_user_claims(board_id: int):
         current_user,
         Board.get_or_404(board_id)
     ))
+
+
+@board_bp.route("/board/<board_id>/add-member", methods=["POST"])
+@jwt_required()
+def add_board_member(board_id: int):
+    data = board_allowed_user_schema.load(request.json)
+
+    # Check if the provided board_role_id is assigned to our board.
+    role = BoardRole.query.filter(
+        sqla.and_(
+            BoardRole.id == data["board_role_id"],
+            BoardRole.board_id == board_id
+        )
+    ).first()
+    if not role:
+        abort(404, "Board role not exists.")
+    member = board_service.add_member(
+        current_user,
+        Board.get_or_404(board_id),
+        User.get_or_404(data["user_id"]),
+        role
+    )
+    db.session.commit()
+    return board_allowed_user_schema.dump(member)
+
+
+@board_bp.route("/board/remove-member/<board_user_id>", methods=["DELETE"])
+@jwt_required()
+def delete_board_member(board_user_id: int):
+    board_service.remove_member(
+        current_user, BoardAllowedUser.get_or_404(board_user_id))
+
+    db.session.commit()
+    return {}

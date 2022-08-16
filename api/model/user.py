@@ -5,6 +5,8 @@ import sqlalchemy as sqla
 import sqlalchemy.orm as sqla_orm
 from werkzeug.security import generate_password_hash, check_password_hash
 
+from . import BaseMixin
+
 from ..app import db
 
 
@@ -63,7 +65,7 @@ user_roles = sqla.Table(
 )
 
 
-class User(db.Model):
+class User(db.Model, BaseMixin):
     __tablename__ = "user"
 
     id = sqla.Column(sqla.Integer, primary_key=True)

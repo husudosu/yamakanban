@@ -22,7 +22,7 @@ class BaseMixin(object):
     def get_or_404(cls, id):
         m = cls.query.get(id)
         if m is None:
-            raise NotFound("Not exists")
+            raise NotFound(f"{cls.__tablename__} not exists")
         return m
 
     def update(self, **kw):

@@ -52,6 +52,7 @@ class BoardAllowedUser(db.Model, BaseMixin):
                 BoardRolePermission.name == permission.value
             )
         ).first()
+        print(self.board_role_id, permission.value.upper(), m)
         return m.allow if m else False
 
 
@@ -121,7 +122,7 @@ class Board(db.Model, BaseMixin):
                 BoardAllowedUser.user_id == user_id
             )
         ).first()
-
+        print(m)
         return False if not m else m.has_permission(permission)
 
     def get_board_user(self, user_id: int) -> BoardAllowedUser:
@@ -151,21 +152,21 @@ def create_default_roles(board: Board) -> typing.List[BoardRole]:
     for permission in BoardPermission:
         admin_role.permissions.append(
             BoardRolePermission(
-                name=permission.name,
+                name=permission.value,
                 allow=True
             )
         )
         # Allow everything for members expect deleting board
         member_role.permissions.append(
             BoardRolePermission(
-                name=permission.name,
+                name=permission.value,
                 allow=permission != BoardPermission.BOARD_DELETE
             )
         )
         # Disable everything for observer role, it has only view access
         observer_role.permissions.append(
             BoardRolePermission(
-                name=permission.name,
+                name=permission.value,
                 allow=False
             )
         )

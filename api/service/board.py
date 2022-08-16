@@ -1,3 +1,4 @@
+from hashlib import new
 from typing import List
 import typing
 import sqlalchemy as sqla
@@ -144,9 +145,37 @@ def get_board_roles(
     raise Forbidden()
 
 
-def invite_member(
+def add_member(
     current_user: User, board: Board,
     new_member: User, new_member_role: BoardRole
-):
+) -> BoardAllowedUser:
+    """Adds member to board
+
+    Args:
+        current_user (User): current logged in user
+        board (Board): Board to assign new member
+        new_member (User): New member User object
+        new_member_role (BoardRole): New member role.
+
+    Raises:
+        Forbidden: _description_
+
+    Returns:
+        BoardAllowedUser: _description_
+    """
     board_user = board.get_board_user(current_user.id)
-    # TODO: Continue from here.
+    if not board_user.role.is_admin:
+        raise Forbidden()
+    member = BoardAllowedUser(
+        user_id=new_member.id,
+        board_role_id=new_member_role.id,
+    )
+    board.board_users.append(member)
+    return member
+
+
+def remove_member(current_user: User, member: BoardAllowedUser):
+    board_user = member.board.get_board_user(current_user.id)
+    if not board_user.role.is_admin:
+        raise Forbidden()
+    db.session.delete(member)
