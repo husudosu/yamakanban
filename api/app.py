@@ -89,6 +89,8 @@ def create_app() -> Flask:
 
     @app.before_first_request
     def before_first_request():
+        from api.model.board import check_permission_integrity
+
         admin_role = user.Role.find_or_create("admin")
         user.Role.find_or_create("user")
         # Check if admin user exists
@@ -105,8 +107,8 @@ def create_app() -> Flask:
                 roles=[admin_role]
             )
             db.session.add(usr)
-
         db.session.commit()
+        check_permission_integrity()
 
     @app.errorhandler(ValidationError)
     def handle_validation_exception(e):
@@ -220,12 +222,8 @@ def create_app() -> Flask:
 
     @app.cli.command("check_permissions")
     def check_permissions():
-        from api.model.board import Board
-        from api.model import BoardPermission
-        for board in Board.query.all():
-            for role in board.board_roles:
-                for permission in BoardPermission:
-                    pass
+        from api.model.board import check_permission_integrity
+        check_permission_integrity()
 
     app.cli.add_command(factory_cli)
 

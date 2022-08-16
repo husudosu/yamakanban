@@ -163,20 +163,29 @@ def create_default_roles(board: Board) -> typing.List[BoardRole]:
     return [admin_role, member_role, observer_role]
 
 
-def check_permission_integrity(board: Board):
+def check_permission_integrity():
     """Checks if all permission object exists for board roles
 
     Args:
         board (Board): _description_
     """
     permission_names = [val.name for val in BoardPermission]
-    # TODO: Continue with this not done yet.
-    for role in board.board_roles:
+    for role in BoardRole.query.all():
         current_permissions = [val.name for val in role.permissions]
-        # Delete permission not existing anymore.
+        # Delete permission not exists anymore.
         for permission in current_permissions:
             if permission not in permission_names:
-                pass
+                # We can remove for permission for all roles.
+                db.session.query(BoardRolePermission).filter(
+                    BoardRolePermission.name == permission
+                ).delete()
         # Add non-existing permissions
-        for permission in p:
-            pass
+        for permission in permission_names:
+            if permission not in current_permissions:
+                role.permissions.append(
+                    BoardRolePermission(
+                        name=permission,
+                        allow=True if role.name != "Observer" else False
+                    )
+                )
+    db.session.commit()
