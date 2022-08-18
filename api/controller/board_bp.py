@@ -6,7 +6,9 @@ from flask import Blueprint, request, jsonify, abort
 from api.model.board import Board, BoardAllowedUser, BoardRole
 from ..model.user import User
 from api.service import board as board_service
-from api.util.schemas import BoardAllowedUserSchema, BoardSchema
+from api.util.schemas import (
+    BoardAllowedUserSchema, BoardRoleSchema, BoardSchema
+)
 
 from api.app import db
 
@@ -15,6 +17,7 @@ board_bp = Blueprint("board_bp", __name__)
 board_schema = BoardSchema()
 boards_schema = BoardSchema(exclude=("lists",))
 board_allowed_user_schema = BoardAllowedUserSchema()
+board_roles_schema = BoardRoleSchema()
 
 
 @board_bp.route("/board")
@@ -86,6 +89,18 @@ def get_user_claims(board_id: int):
     return board_allowed_user_schema.dump(board_service.get_board_claims(
         current_user,
         Board.get_or_404(board_id)
+    ))
+
+
+@board_bp.route("/board/<board_id>/roles")
+@jwt_required()
+def get_board_roles(board_id: int):
+    return jsonify(board_roles_schema.dump(
+        board_service.get_board_roles(
+            current_user,
+            Board.get_or_404(board_id)
+        ),
+        many=True
     ))
 
 

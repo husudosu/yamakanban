@@ -75,8 +75,6 @@ class User(db.Model, BaseMixin):
     password = sqla.Column(sqla.String(255), nullable=False)
     avatar_url = sqla.Column(sqla.Text)
 
-    full_name = sqla.Column(sqla.String(255))
-
     registered_date = sqla.Column(sqla.DateTime, default=datetime.now)
 
     # History related stuff

@@ -1,4 +1,3 @@
-from hashlib import new
 from typing import List
 import typing
 import sqlalchemy as sqla
@@ -8,6 +7,7 @@ from api.model.list import BoardList
 from api.app import db
 
 from werkzeug.exceptions import Forbidden
+from marshmallow.exceptions import ValidationError
 
 from api.model.user import User
 
@@ -166,6 +166,16 @@ def add_member(
     board_user = board.get_board_user(current_user.id)
     if not board_user.role.is_admin:
         raise Forbidden()
+
+    # Check if user already exists
+    if BoardAllowedUser.query.filter(
+        sqla.and_(
+            BoardAllowedUser.user_id == new_member.id,
+            BoardAllowedUser.board_id == board.id
+        )
+    ).first():
+        raise ValidationError({"user_id": ["User already member on board."]})
+
     member = BoardAllowedUser(
         user_id=new_member.id,
         board_role_id=new_member_role.id,

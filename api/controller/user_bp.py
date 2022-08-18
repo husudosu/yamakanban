@@ -1,5 +1,8 @@
 from datetime import datetime
-from flask import jsonify, make_response, render_template, request, Blueprint, current_app
+from flask import (
+    jsonify, make_response, render_template,
+    request, Blueprint, current_app, abort
+)
 from flask_jwt_extended import (
     create_access_token, jwt_required, get_jwt_identity,
     get_jwt, current_user, verify_jwt_in_request,
@@ -18,7 +21,10 @@ user_bp = Blueprint("user_bp", __name__, url_prefix="/auth")
 
 user_schema = UserSchema()
 guest_user_schema = UserSchema(
-    only=("id", "username", "registered_date", "full_name",)
+    only=(
+        "id", "username", "name",
+        "avatar_url",
+    )
 )
 update_user_schema = UserSchema(
     partial=("username", "password", "email",),
@@ -298,3 +304,10 @@ def logout():
     )
     db.session.commit()
     return jsonify(message="Token revoked")
+
+
+@user_bp.route("/find-user", methods=["POST"])
+@jwt_required()
+def find_user():
+    usr = User.find_user(request.json["username"])
+    return guest_user_schema.dump(usr) if usr else abort(404)

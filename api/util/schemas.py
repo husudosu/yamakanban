@@ -31,8 +31,6 @@ class UserSchema(SQLAlchemySchema):
         validate=validate.Length(3, 255), required=True, load_only=True)
 
     email = fields.Email(required=True)
-    full_name = fields.String(
-        validate=validate.Length(max=255), required=False)
 
     registered_date = fields.DateTime(dump_only=True)
 
