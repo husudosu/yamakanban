@@ -241,7 +241,7 @@ class BoardRoleSchema(SQLAlchemySchema):
     id = fields.Integer(dump_only=True)
     board_role_id = fields.Integer(dump_only=True)
     name = fields.String()
-    is_admin = fields.Boolean(missing=False)
+    is_admin = fields.Boolean(load_default=False)
     permissions = fields.Nested(
         BoardRolePermissionSchema, many=True, dump_only=True)
 

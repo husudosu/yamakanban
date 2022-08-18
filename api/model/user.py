@@ -5,6 +5,8 @@ import sqlalchemy as sqla
 import sqlalchemy.orm as sqla_orm
 from werkzeug.security import generate_password_hash, check_password_hash
 
+from flask import current_app
+
 from . import BaseMixin
 
 from ..app import db
@@ -121,6 +123,11 @@ class User(db.Model, BaseMixin):
         """
         user = cls(**kwargs)
         # Generate hashed password for user
+
+        # Add default timezone if not exists.
+        if "timezone" not in kwargs.keys():
+            user.timezone = current_app.config["DEFAULT_TIMEZONE"]
+
         user.password = generate_password_hash(user.password)
         return user
 

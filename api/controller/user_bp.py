@@ -4,7 +4,7 @@ from flask import (
     request, Blueprint, current_app, abort
 )
 from flask_jwt_extended import (
-    create_access_token, jwt_required, get_jwt_identity,
+    create_access_token, jwt_required,
     get_jwt, current_user, verify_jwt_in_request,
     create_refresh_token, decode_token,
     set_access_cookies, set_refresh_cookies
@@ -256,27 +256,6 @@ def get_me():
         return patch_user(current_user.id)
     else:
         return delete_user(current_user.id)
-
-
-@user_bp.route("/protected_post", methods=["POST"])
-@jwt_required()
-def test_post():
-    identity = get_jwt_identity()
-    return jsonify(logged_in_as=identity), 200
-
-
-@user_bp.route("/protected_patch", methods=["PATCH"])
-@jwt_required()
-def test_patch():
-    identity = get_jwt_identity()
-    return jsonify(logged_in_as=identity), 200
-
-
-@user_bp.route("/protected_delete", methods=["DELETE"])
-@jwt_required()
-def test_delete():
-    identity = get_jwt_identity()
-    return jsonify(logged_in_as=identity), 200
 
 
 @user_bp.route("/refresh", methods=["POST"])

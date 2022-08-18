@@ -5,22 +5,26 @@ from api.model.user import User
 
 def test_valid_register(client):
     """Tests a valid, ideal register case"""
+    test_data = {
+        "username": "my_test_user",
+        "password": "my_test_user",
+        "email": "my_test_user@localhost.com",
+        "name": "My Test User",
+        "timezone": "Europe/Budapest",
+    }
     resp = client.post(
         "/api/v1/auth/register",
-        json={
-            "username": "my_test_user",
-            "password": "my_test_user",
-            "email": "my_test_user@localhost.com",
-            "full_name": "My Test User",
-        }
+        json=test_data
     )
+
     assert resp.status_code == 200
     assert resp.json["id"]
     assert resp.json["roles"]
-    assert resp.json["username"] == "my_test_user"
+    assert resp.json["username"] == test_data["username"]
     assert "password" not in resp.json.keys()
-    assert resp.json["email"] == "my_test_user@localhost.com"
-    assert resp.json["full_name"] == "My Test User"
+    assert resp.json["email"] == test_data["email"]
+    assert resp.json["name"] == test_data["name"]
+    assert resp.json["timezone"] == test_data["timezone"]
 
 
 def test_invalid_register(client):
@@ -34,7 +38,8 @@ def test_invalid_register(client):
         json={
             "username": "my_test_user",
             "password": "test",
-            "email": "my_test_user@localhost.com"
+            "email": "my_test_user@localhost.com",
+            "timezone": "Europe/Budapest"
         }
     )
     assert resp.status_code == 400
@@ -161,8 +166,7 @@ def test_user_get_me(client, test_users):
     assert "current_login_at" in resp.json.keys()
 
 
-
-def test_user_patch_me(client, test_users, test_admin):
+def test_user_patch_me(client, test_users):
     """Test updating logged in user"""
     tokens = do_login(client, "usr1", "usr1")
 
@@ -174,7 +178,6 @@ def test_user_patch_me(client, test_users, test_admin):
             "current_password": "invalid_current_password"
         }
     )
-    print(resp_invalid.json)
 
     assert resp_invalid.status_code == 400
     # Role editing for regular user should be disabled
@@ -226,7 +229,7 @@ def test_patch_otheruser(client, app, test_users):
         tokens = do_login(client, "usr1", "usr1")
         # Try edit other user profile
         resp = client.patch(
-            "/api/v1/auth/users/2",
+            "/api/v1/auth/users/3",
             headers={"Authorization": f"Bearer {tokens['access_token']}"},
             json={"email": "test@localhost.com"})
         print(resp.json)
@@ -234,7 +237,7 @@ def test_patch_otheruser(client, app, test_users):
         # Now do a login as admin
         tokens = do_login(client, "admin", "admin")
         resp = client.patch(
-            "/api/v1/auth/users/2",
+            "/api/v1/auth/users/3",
             headers={"Authorization": f"Bearer {tokens['access_token']}"},
             json={"roles": ["admin"]}
         )
@@ -242,7 +245,7 @@ def test_patch_otheruser(client, app, test_users):
         assert "admin" in resp.json["roles"]
 
 
-def test_delete_user(client, app, test_users, test_admin):
+def test_delete_user(client, app, test_users):
     """Tests deleting of user"""
 
     with app.app_context():
@@ -250,7 +253,7 @@ def test_delete_user(client, app, test_users, test_admin):
 
         # Try to delete other user.
         resp_invalid = client.delete(
-            "/api/v1/auth/users/2",
+            "/api/v1/auth/users/1",
             headers={"Authorization": f"Bearer {usr_tokens['access_token']}"},
         )
         assert resp_invalid.status_code == 403
@@ -267,8 +270,9 @@ def test_delete_user(client, app, test_users, test_admin):
 
         admin_tokens = do_login(client, "admin", "admin")
         resp_valid_admin = client.delete(
-            "/api/v1/auth/users/2",
-            headers={"Authorization": f"Bearer {admin_tokens['access_token']}"},
+            "/api/v1/auth/users/3",
+            headers={
+                "Authorization": f"Bearer {admin_tokens['access_token']}"},
         )
         assert resp_valid_admin.status_code == 200
         usr = User.query.get(2)

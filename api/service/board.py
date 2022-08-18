@@ -164,7 +164,7 @@ def add_member(
         BoardAllowedUser: _description_
     """
     board_user = board.get_board_user(current_user.id)
-    if not board_user.role.is_admin:
+    if not board_user or not board_user.role.is_admin:
         raise Forbidden()
 
     # Check if user already exists

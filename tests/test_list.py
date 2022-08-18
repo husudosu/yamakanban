@@ -35,7 +35,7 @@ def test_get_board_lists_forbidden(app, client, test_users, test_boardlists):
         resp.status_code == 403
 
 
-def test_add_board_lists(app, client, test_users, private_boards):
+def test_add_board_lists(app, client, test_users, test_boards):
     with app.app_context():
         tokens = do_login(client, "usr1", "usr1")
         test_board = Board.query.get(1)
@@ -55,7 +55,7 @@ def test_add_board_lists(app, client, test_users, private_boards):
         assert resp.json["position"] == test_data["position"]
 
 
-def test_add_board_lists_forbidden(app, client, test_users, private_boards):
+def test_add_board_lists_forbidden(app, client, test_users, test_boards):
     with app.app_context():
         tokens = do_login(client, "usr2", "usr2")
         test_board = Board.query.get(1)
