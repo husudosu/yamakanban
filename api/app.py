@@ -1,5 +1,7 @@
 import traceback
 import click
+from datetime import datetime, timezone, timedelta
+
 from werkzeug.exceptions import HTTPException
 import json
 
@@ -9,7 +11,10 @@ from flask.cli import AppGroup
 from flask_cors import CORS
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
-from flask_jwt_extended import JWTManager
+from flask_jwt_extended import (
+    JWTManager, get_jwt, create_access_token,
+    get_jwt_identity, set_access_cookies
+)
 from flask_mail import Mail
 from flask_compress import Compress
 
@@ -109,6 +114,24 @@ def create_app() -> Flask:
             db.session.add(usr)
         db.session.commit()
         check_permission_integrity()
+
+    @app.after_request
+    def refresh_expiring_jwts(response):
+        try:
+            exp_timestamp = get_jwt()["exp"]
+            now = datetime.now(timezone.utc)
+            target_timestamp = datetime.timestamp(now + timedelta(minutes=30))
+            if target_timestamp > exp_timestamp:
+                # FIXME: Need better solution for getting user object.
+                access_token = create_access_token(
+                    identity=user.User.query.filter(
+                        user.User.id == get_jwt_identity()
+                    ).one_or_none()
+                )
+                set_access_cookies(response, access_token)
+            return response
+        except (RuntimeError, KeyError):
+            return response
 
     @app.errorhandler(ValidationError)
     def handle_validation_exception(e):
