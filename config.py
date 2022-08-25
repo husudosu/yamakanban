@@ -66,3 +66,4 @@ class Config:
         os.environ.get("ALLOW_TO_VIEW_OTHER_USER", "0"))
 
     DEFAULT_TIMEZONE = os.environ.get("DEFAULT_TIMEZONE", "Europe/Budapest")
+    PROFILER_ENABLED = strtobool(os.environ.get("PROFILER_ENABLED", "0"))

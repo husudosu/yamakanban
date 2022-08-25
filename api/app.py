@@ -35,11 +35,13 @@ compress = Compress()
 def create_app() -> Flask:
     app = Flask(__name__)
     app.config.from_object(Config)
-    # app.wsgi_app = ProfilerMiddleware(
-    #     app.wsgi_app,
-    #     restrictions=[5],
-    #     profile_dir='./profile'
-    # )
+
+    if app.config["PROFILER_ENABLED"]:
+        app.wsgi_app = ProfilerMiddleware(
+            app.wsgi_app,
+            restrictions=[5],
+            profile_dir='./profile'
+        )
 
     factory_cli = AppGroup("factory")
 
@@ -70,11 +72,6 @@ def create_app() -> Flask:
     app.register_blueprint(api_bp)
 
     compress.init_app(app)
-    # @api_bp.after_request
-    # def api_after_request(response):
-    #     # jsonify all data from API route
-    #     response.set_data(jsonify(response.get_data()))
-    #     return response
 
     @jwt.user_identity_loader
     def user_identity_lookup(user):

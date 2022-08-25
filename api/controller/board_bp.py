@@ -104,7 +104,7 @@ def get_board_roles(board_id: int):
     ))
 
 
-@board_bp.route("/board/<board_id>/add-member", methods=["POST"])
+@board_bp.route("/board/<board_id>/member", methods=["POST"])
 @jwt_required()
 def add_board_member(board_id: int):
     data = board_allowed_user_schema.load(request.json)
@@ -128,11 +128,13 @@ def add_board_member(board_id: int):
     return board_allowed_user_schema.dump(member)
 
 
-@board_bp.route("/board/remove-member/<board_user_id>", methods=["DELETE"])
+@board_bp.route("/board/<board_id>/member", methods=["DELETE"])
 @jwt_required()
-def delete_board_member(board_user_id: int):
+def delete_board_member(board_id: int):
+    data = board_allowed_user_schema.load(request.json, partial=True)
     board_service.remove_member(
-        current_user, BoardAllowedUser.get_or_404(board_user_id))
-
-    db.session.commit()
+        current_user,
+        Board.get_or_404(board_id),
+        User.get_or_404(data["user_id"])
+    )
     return {}

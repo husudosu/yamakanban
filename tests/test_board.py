@@ -107,7 +107,7 @@ def test_invalid_add_member(app, client, test_users, test_boards):
         usr2: User = User.find_user("usr2")
 
         resp_forbidden = client.post(
-            f"/api/v1/board/{test_board.id}/add-member",
+            f"/api/v1/board/{test_board.id}/member",
             headers={"Authorization": f"Bearer {usr2_tokens['access_token']}"},
             json={
                 "user_id": usr2.id,
@@ -119,7 +119,7 @@ def test_invalid_add_member(app, client, test_users, test_boards):
 
         # You don't allowed add yourself again.
         resp_add_myself = client.post(
-            f"/api/v1/board/{test_board.id}/add-member",
+            f"/api/v1/board/{test_board.id}/member",
             headers={"Authorization": f"Bearer {usr_tokens['access_token']}"},
             json={
                 "user_id": usr1.id,
@@ -137,7 +137,7 @@ def test_valid_add_member(app, client, test_users, test_boards):
         usr2: User = User.find_user("usr2")
 
         resp_valid = client.post(
-            f"/api/v1/board/{test_board.id}/add-member",
+            f"/api/v1/board/{test_board.id}/member",
             headers={"Authorization": f"Bearer {tokens['access_token']}"},
             json={
                 "user_id": usr2.id,
@@ -148,30 +148,59 @@ def test_valid_add_member(app, client, test_users, test_boards):
         assert resp_valid.status_code == 200
 
 
-def test_invalid_add_member(app, client, test_users, test_boards):
+def test_invalid_remove_member(app, client, test_users, test_boards):
     with app.app_context():
         tokens = do_login(client, "usr2", "usr2")
         test_board: Board = Board.query.get(1)
         usr1: User = User.find_user("usr1")
 
-        resp_forbidden = client.post(
-            f"/api/v1/board/{test_board.id}/add-member",
+        resp_forbidden = client.delete(
+            f"/api/v1/board/{test_board.id}/member",
             headers={"Authorization": f"Bearer {tokens['access_token']}"},
             json={
                 "user_id": usr1.id,
-                "board_id": test_board.id,
-                "board_role_id": test_board.board_roles[0].id
             }
         )
+        print(resp_forbidden.json)
         assert resp_forbidden.status_code == 403
 
 
-def test_invalid_remove_member(app, client, test_users, test_boards):
+def test_valid_remove_member(app, client, test_users, test_boards):
     with app.app_context():
-        tokens = do_login(client, "usr1", "usr1")
         '''
         Expected behaviour:
             - Admin board role required for adding/removing members
             - At least one admin required for every board!
             - The user can't delete own access from board.
         '''
+        tokens = do_login(client, "usr1", "usr1")
+        test_board: Board = Board.query.get(1)
+        usr2: User = User.find_user("usr2")
+
+        # Add a valid member
+        client.post(
+            f"/api/v1/board/{test_board.id}/member",
+            headers={"Authorization": f"Bearer {tokens['access_token']}"},
+            json={
+                "user_id": usr2.id,
+                "board_id": test_board.id,
+                "board_role_id": test_board.board_roles[0].id
+            }
+        )
+        # Remove member
+        resp_remove = client.delete(
+            f"/api/v1/board/{test_board.id}/member",
+            headers={"Authorization": f"Bearer {tokens['access_token']}"},
+            json={
+                "user_id": usr2.id
+            }
+        )
+        assert resp_remove.status_code == 200
+
+        # Check if it's deleted.
+        usr2_tokens = do_login(client, "usr2", "usr2")
+        resp_forbidden = client.get(
+            f"/api/v1/board/{test_board.id}",
+            headers={"Authorization": f"Bearer {usr2_tokens['access_token']}"}
+        )
+        assert resp_forbidden.status_code == 403

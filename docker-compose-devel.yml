@@ -11,19 +11,6 @@ services:
             - "development.env"
         ports:
             - "5432:5432"
-    todoman_redis:
-        image: redis
-        hostname: todoman_redis
-        container_name: todoman_redis
-        restart: unless-stopped
-        volumes:
-            - "/etc/timezone:/etc/timezone:ro"
-            - "/etc/localtime:/etc/localtime:ro"
-            - "redis_cache:/data"
-        ports:
-            - "6379:6379"
 volumes:
     sql:
-        driver: local
-    redis_cache:
         driver: local

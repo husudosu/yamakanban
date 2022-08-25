@@ -184,8 +184,9 @@ def add_member(
     return member
 
 
-def remove_member(current_user: User, member: BoardAllowedUser):
-    board_user = member.board.get_board_user(current_user.id)
-    if not board_user.role.is_admin:
+def remove_member(current_user: User, board: Board, user: User):
+    board_user = board.get_board_user(current_user.id)
+    if not board_user or not board_user.role.is_admin:
         raise Forbidden()
-    db.session.delete(member)
+
+    db.session.delete(board.get_board_user(user.id))
