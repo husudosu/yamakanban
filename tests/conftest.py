@@ -1,9 +1,15 @@
+import typing
 import pytest
 
+import sqlalchemy as sqla
+
 from api.app import create_app, db
-from api.model.board import Board
+from api.model.board import Board, BoardRole
 from api.model.list import BoardList
 from api.model.user import Role, User
+
+from api.service import board as board_service
+from api.util import factory
 
 
 @pytest.fixture()
@@ -95,6 +101,12 @@ def do_login(client, username, password):
 
 @pytest.fixture()
 def test_boards(app, test_users):
+    """Creates these boards:
+    1: owner: usr1
+    2: owner: usr1; allowed users: usr2 as observer
+    3: owner: usr2
+    4: owner: usr2
+    """
     with app.app_context():
         usr1 = User.find_user("usr1")
         usr2 = User.find_user("usr2")
@@ -104,12 +116,26 @@ def test_boards(app, test_users):
                 title="Test board",
             )
         )
-        db.session.add(
-            Board(
-                owner_id=usr1.id,
-                title="Test board 2",
-            )
+
+        board2 = Board(
+            owner_id=usr1.id,
+            title="Test board 2",
         )
+        db.session.add(board2)
+        db.session.commit()
+        observer_role = BoardRole.query.filter(
+            sqla.and_(
+                BoardRole.board_id == board2.id,
+                BoardRole.name == "Observer"
+            )
+        ).first()
+        board_service.add_member(
+            usr1,
+            board2,
+            usr2,
+            observer_role
+        )
+
         db.session.add(
             Board(
                 owner_id=usr2.id,
@@ -138,3 +164,30 @@ def test_boardlists(app, test_boards):
                     )
                 )
         db.session.commit()
+
+
+@pytest.fixture()
+def test_lists(app, test_boards):
+    """Creates 5 lists for every board."""
+    with app.app_context():
+        boards: typing.List[Board] = Board.query.all()
+
+        for board in boards:
+            for _ in range(0, 5):
+                factory.create_list(board.owner, board)
+        db.session.commit()
+
+
+@pytest.fixture()
+def test_cards(app, test_lists):
+    """Creates cards with various activites. Creates for every existing list"""
+    with app.app_context():
+        lists: typing.List[BoardList] = BoardList.query.all()
+        for list in lists:
+            for _ in range(0, 5):
+                card = factory.create_card(list.board.owner, list)
+
+                # Create comments for card
+                for _ in range(0, 5):
+                    factory.create_comment(list.board.owner, card)
+                db.session.commit()

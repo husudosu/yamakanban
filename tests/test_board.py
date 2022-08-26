@@ -1,4 +1,6 @@
-from api.model.board import Board
+import sqlalchemy as sqla
+
+from api.model.board import Board, BoardRole
 from api.model.user import User
 from .conftest import do_login
 
@@ -12,7 +14,7 @@ def test_get_boards(client, test_users, test_boards):
 
     assert resp.status_code == 200
     # Check if got only available boards for user
-    assert len(resp.json) == 2
+    assert len(resp.json) == 3
 
 
 def test_get_board_allowed(app, client, test_users, test_boards):
@@ -204,3 +206,65 @@ def test_valid_remove_member(app, client, test_users, test_boards):
             headers={"Authorization": f"Bearer {usr2_tokens['access_token']}"}
         )
         assert resp_forbidden.status_code == 403
+
+
+def test_board_permissions(app, client, test_users, test_boards):
+    with app.app_context():
+        tokens = do_login(client, "usr2", "usr2")
+        test_board1: Board = Board.query.get(1)
+        test_board2: Board = Board.query.get(2)
+        usr2: User = User.find_user("usr2")
+        observer_role: BoardRole = BoardRole.query.filter(
+            sqla.and_(
+                BoardRole.board_id == test_board2.id,
+                BoardRole.name == "Observer"
+            )
+        ).first()
+
+        resp_forbidden = client.get(
+            f"/api/v1/board/{test_board1.id}/user-claims",
+            headers={"Authorization": f"Bearer {tokens['access_token']}"}
+        )
+        assert resp_forbidden.status_code == 403
+
+        resp_claims = client.get(
+            f"/api/v1/board/{test_board2.id}/user-claims",
+            headers={"Authorization": f"Bearer {tokens['access_token']}"}
+        )
+        assert resp_claims.status_code == 200
+        assert "id" in resp_claims.json.keys()
+        assert resp_claims.json["user_id"] == usr2.id
+        assert resp_claims.json["board_id"] == test_board2.id
+        assert resp_claims.json["board_role_id"] == observer_role.id
+        assert resp_claims.json["is_owner"] == False
+        assert "role" in resp_claims.json.keys()
+        assert "permissions" in resp_claims.json["role"].keys()
+        # Check role permissions
+        for permission in resp_claims.json["role"]["permissions"]:
+            assert permission["allow"] == False
+
+
+def test_board_roles(app, client, test_users, test_boards):
+    with app.app_context():
+        tokens = do_login(client, "usr1", "usr1")
+        test_board1: Board = Board.query.get(1)
+        test_board3: Board = Board.query.get(3)
+
+        resp_roles = client.get(
+            f"/api/v1/board/{test_board1.id}/roles",
+            headers={"Authorization": f"Bearer {tokens['access_token']}"}
+        )
+
+        assert resp_roles.status_code == 200
+        for role in resp_roles.json:
+            assert "id" in role.keys()
+            assert "name" in role.keys()
+            assert "is_admin" in role.keys()
+            assert "permissions" in role.keys()
+
+        # usr1 can't access board3
+        resp_roles_forbidden = client.get(
+            f"/api/v1/board/{test_board3.id}/roles",
+            headers={"Authorization": f"Bearer {tokens['access_token']}"}
+        )
+        assert resp_roles_forbidden.status_code == 403

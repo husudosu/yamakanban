@@ -2,8 +2,9 @@
 import sqlalchemy as sqla
 from flask_jwt_extended import current_user, jwt_required
 
+from werkzeug.exceptions import Forbidden
 from flask import Blueprint, request, jsonify, abort
-from api.model.board import Board, BoardAllowedUser, BoardRole
+from api.model.board import Board, BoardRole
 from ..model.user import User
 from api.service import board as board_service
 from api.util.schemas import (
@@ -86,10 +87,13 @@ def patch_boardlists_order(board_id: int):
 @board_bp.route("/board/<board_id>/user-claims", methods=["GET"])
 @jwt_required()
 def get_user_claims(board_id: int):
-    return board_allowed_user_schema.dump(board_service.get_board_claims(
+    claims = board_service.get_board_claims(
         current_user,
         Board.get_or_404(board_id)
-    ))
+    )
+    if not claims:
+        raise Forbidden()
+    return board_allowed_user_schema.dump(claims)
 
 
 @board_bp.route("/board/<board_id>/roles")

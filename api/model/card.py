@@ -51,7 +51,8 @@ class CardListChange(db.Model, BaseMixin):
     __tablename__ = "card_list_assignment"
 
     id = sqla.Column(sqla.Integer, primary_key=True)
-    activity_id = sqla.Column(sqla.Integer, sqla.ForeignKey("card_activity.id"))
+    activity_id = sqla.Column(
+        sqla.Integer, sqla.ForeignKey("card_activity.id"))
 
     from_list_id = sqla.Column(sqla.Integer, sqla.ForeignKey("list.id"))
     to_list_id = sqla.Column(sqla.Integer, sqla.ForeignKey("list.id"))

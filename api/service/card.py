@@ -2,7 +2,6 @@ import typing
 from werkzeug.exceptions import Forbidden
 from api.app import db
 from api.model import BoardPermission, CardActivityEvent
-from ..model.board import Board
 from api.model.user import User
 from api.model.list import BoardList
 from api.model.card import Card, CardActivity, CardComment, CardChecklist, CardListChange

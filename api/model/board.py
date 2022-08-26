@@ -83,6 +83,10 @@ class Board(db.Model, BaseMixin):
         back_populates="board",
         order_by="asc(BoardList.position)"
     )
+    owner = sqla_orm.relationship(
+        "User",
+        back_populates="boards"
+    )
 
     def __init__(self, **kwargs):
         for key, value in kwargs.items():

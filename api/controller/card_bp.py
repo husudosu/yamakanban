@@ -1,7 +1,6 @@
 from flask import Blueprint, jsonify, request
 from flask_jwt_extended import jwt_required, current_user
 
-from time import sleep
 from api.app import db
 from api.model.card import Card, CardComment
 from api.model.list import BoardList
