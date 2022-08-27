@@ -108,6 +108,19 @@ def get_board_roles(board_id: int):
     ))
 
 
+@board_bp.route("/board/<board_id>/find-member", methods=["POST"])
+@jwt_required()
+def find_member(board_id: int):
+    member = board_service.get_member(
+        current_user,
+        Board.get_or_404(board_id),
+        request.json["user_id"]
+    )
+    if not member:
+        abort(404, "Member not found.")
+    return board_allowed_user_schema.dump(member)
+
+
 @board_bp.route("/board/<board_id>/member", methods=["POST"])
 @jwt_required()
 def add_board_member(board_id: int):

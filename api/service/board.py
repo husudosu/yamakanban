@@ -145,6 +145,28 @@ def get_board_roles(
     raise Forbidden()
 
 
+def get_member(
+    current_user: User, board: Board, user_id: int
+) -> typing.Union[BoardAllowedUser, None]:
+    """Gets board member if exists.
+
+    Args:
+        current_user (User): Current logged in user
+        board (Board): Board
+        user_id (int): User ID which we want to get board user.
+
+    Raises:
+        Forbidden: Don't have permission to access the board
+
+    Returns:
+        typing.Union[BoardAllowedUser, None]: Board user or None if not exists.
+    """
+    board_user = board.get_board_user(current_user.id)
+    if not board_user:
+        raise Forbidden()
+    return board.get_board_user(user_id)
+
+
 def add_member(
     current_user: User, board: Board,
     new_member: User, new_member_role: BoardRole
