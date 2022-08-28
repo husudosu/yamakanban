@@ -18,6 +18,8 @@ board_bp = Blueprint("board_bp", __name__)
 board_schema = BoardSchema()
 boards_schema = BoardSchema(exclude=("lists",))
 board_allowed_user_schema = BoardAllowedUserSchema()
+board_allowed_users_schema = BoardAllowedUserSchema(
+    exclude=("role.permissions",))
 board_roles_schema = BoardRoleSchema()
 
 
@@ -121,6 +123,18 @@ def find_member(board_id: int):
     return board_allowed_user_schema.dump(member)
 
 
+@board_bp.route("/board/<board_id>/member", methods=["GET"])
+@jwt_required()
+def get_board_members(board_id: int):
+    return jsonify(board_allowed_users_schema.dump(
+        board_service.get_members(
+            current_user,
+            Board.get_or_404(board_id)
+        ),
+        many=True
+    ))
+
+
 @board_bp.route("/board/<board_id>/member", methods=["POST"])
 @jwt_required()
 def add_board_member(board_id: int):
@@ -145,13 +159,37 @@ def add_board_member(board_id: int):
     return board_allowed_user_schema.dump(member)
 
 
-@board_bp.route("/board/<board_id>/member", methods=["DELETE"])
+@board_bp.route("/board/<board_id>/member/<user_id>", methods=["PATCH"])
 @jwt_required()
-def delete_board_member(board_id: int):
-    data = board_allowed_user_schema.load(request.json, partial=True)
+def update_board_member(board_id: int, user_id: int):
+    # TODO: Create marshmallow schema for loading data!
+    role = BoardRole.query.filter(
+        sqla.and_(
+            BoardRole.board_id == board_id,
+            BoardRole.id == request.json["board_role_id"]
+        )
+    ).first()
+
+    if not role:
+        abort(404, "Board role not exists.")
+    member = board_service.update_member_role(
+        current_user,
+        Board.get_or_404(board_id),
+        User.get_or_404(user_id),
+        role
+    )
+    db.session.commit()
+    db.session.refresh(member)
+    return board_allowed_user_schema.dump(member)
+
+
+@board_bp.route("/board/<board_id>/member/<user_id>", methods=["DELETE"])
+@jwt_required()
+def delete_board_member(board_id: int, user_id: int):
     board_service.remove_member(
         current_user,
         Board.get_or_404(board_id),
-        User.get_or_404(data["user_id"])
+        User.get_or_404(user_id)
     )
+    db.session.commit()
     return {}

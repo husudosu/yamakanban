@@ -167,6 +167,15 @@ def get_member(
     return board.get_board_user(user_id)
 
 
+def get_members(
+    current_user: User, board: Board
+) -> typing.List[BoardAllowedUser]:
+    board_user = board.get_board_user(current_user.id)
+    if not board_user:
+        raise Forbidden()
+    return board.board_users
+
+
 def add_member(
     current_user: User, board: Board,
     new_member: User, new_member_role: BoardRole
@@ -206,8 +215,27 @@ def add_member(
     return member
 
 
+def update_member_role(
+    current_user: User, board: Board,
+    user: User, role: BoardRole
+):
+    board_user = board.get_board_user(current_user.id)
+    # You can't modify your own role.
+    if board_user.user_id == user.id:
+        raise ValidationError({"user_id": ["You can't update your own role."]})
+
+    if not board_user or not board_user.role.is_admin:
+        raise Forbidden()
+    member = board.get_board_user(user.id)
+    member.role = role
+    return member
+
+
 def remove_member(current_user: User, board: Board, user: User):
     board_user = board.get_board_user(current_user.id)
+    # You can't remove yourself
+    if board_user.user_id == user.id:
+        raise ValidationError({"user_id": ["You can't remove yourself."]})
     if not board_user or not board_user.role.is_admin:
         raise Forbidden()
 

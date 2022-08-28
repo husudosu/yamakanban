@@ -44,6 +44,7 @@ class BoardAllowedUser(db.Model, BaseMixin):
 
     board = sqla_orm.relationship("Board", back_populates="board_users")
     role = sqla_orm.relationship("BoardRole", uselist=False)
+    user = sqla_orm.relationship("User", uselist=False)
 
     def has_permission(self, permission: BoardPermission):
         m = BoardRolePermission.query.filter(
