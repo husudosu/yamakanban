@@ -53,7 +53,6 @@ class BoardAllowedUser(db.Model, BaseMixin):
                 BoardRolePermission.name == permission.value
             )
         ).first()
-        print(self.board_role_id, permission.value.upper(), m)
         return m.allow if m else False
 
 
@@ -187,6 +186,7 @@ def check_permission_integrity():
     Args:
         board (Board): _description_
     """
+    # TODO: Investigate this, probably creates wrong permissions.
     permission_names = [val.name for val in BoardPermission]
     for role in BoardRole.query.all():
         current_permissions = [val.name for val in role.permissions]

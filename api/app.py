@@ -91,7 +91,7 @@ def create_app() -> Flask:
 
     @app.before_first_request
     def before_first_request():
-        from api.model.board import check_permission_integrity
+        # from api.model.board import check_permission_integrity
 
         admin_role = user.Role.find_or_create("admin")
         user.Role.find_or_create("user")
@@ -110,7 +110,7 @@ def create_app() -> Flask:
             )
             db.session.add(usr)
         db.session.commit()
-        check_permission_integrity()
+        # check_permission_integrity()
 
     @app.after_request
     def refresh_expiring_jwts(response):

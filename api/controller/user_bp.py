@@ -23,7 +23,7 @@ user_schema = UserSchema()
 guest_user_schema = UserSchema(
     only=(
         "id", "username", "name",
-        "avatar_url",
+        "avatar_url", "timezone"
     )
 )
 update_user_schema = UserSchema(
@@ -92,7 +92,8 @@ def get_user_claims():
         "username": current_user.username,
         "email": current_user.email,
         "roles": [role.name for role in current_user.roles],
-        "name": current_user.name
+        "name": current_user.name,
+        "timezone": current_user.timezone
     }
 
 
