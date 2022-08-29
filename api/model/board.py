@@ -186,8 +186,7 @@ def check_permission_integrity():
     Args:
         board (Board): _description_
     """
-    # TODO: Investigate this, probably creates wrong permissions.
-    permission_names = [val.name for val in BoardPermission]
+    permission_names = [val.value for val in BoardPermission]
     for role in BoardRole.query.all():
         current_permissions = [val.name for val in role.permissions]
         # Delete permission not exists anymore.
