@@ -40,7 +40,6 @@ class BoardPermission(enum.Enum):
     LIST_DELETE = "list.delete"
     BOARD_UPDATE = "board.update"
     BOARD_DELETE = "board.delete"
-    BOARD_INVITE_MEMBER = "board.invite_member"
 
 
 class CardActivityEvent(RestEnum):

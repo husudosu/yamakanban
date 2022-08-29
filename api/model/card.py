@@ -15,7 +15,7 @@ class CardActivity(db.Model, BaseMixin):
     user_id = sqla.Column(
         sqla.Integer, sqla.ForeignKey("user.id"), nullable=False)
     activity_on = sqla.Column(
-        sqla.DateTime(timezone=True),
+        sqla.DateTime,
         default=datetime.utcnow
     )
 
@@ -110,9 +110,9 @@ class CardComment(db.Model, BaseMixin):
     comment = sqla.Column(sqla.Text)
 
     created = sqla.Column(
-        sqla.DateTime(timezone=True), default=datetime.utcnow
+        sqla.DateTime, default=datetime.utcnow
     )
-    updated = sqla.Column(sqla.DateTime(timezone=True))
+    updated = sqla.Column(sqla.DateTime)
 
     activity = sqla_orm.relationship("CardActivity", back_populates="comment")
 
@@ -133,7 +133,7 @@ class Card(db.Model, BaseMixin):
 
     title = sqla.Column(sqla.Text, nullable=False)
     description = sqla.Column(sqla.Text)
-    due_date = sqla.Column(sqla.DateTime(timezone=True))
+    due_date = sqla.Column(sqla.DateTime)
     position = sqla.Column(sqla.SmallInteger, default=0)
 
     board_list = sqla_orm.relationship(
