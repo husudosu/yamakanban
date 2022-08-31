@@ -126,7 +126,6 @@ class Board(db.Model, BaseMixin):
                 BoardAllowedUser.user_id == user_id
             )
         ).first()
-        print(m)
         return False if not m else m.has_permission(permission)
 
     def get_board_user(self, user_id: int) -> BoardAllowedUser:

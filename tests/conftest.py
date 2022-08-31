@@ -46,6 +46,7 @@ def test_users(app, client, test_roles):
     """
     with app.app_context():
         # Create admin user too
+        user_role = Role.find("user")
         admin = User.create(
             username="admin",
             password="admin",
@@ -58,7 +59,7 @@ def test_users(app, client, test_roles):
             password="usr1",
             email="usr1@localhost.com",
             timezone=app.config["DEFAULT_TIMEZONE"],
-            roles=[Role.find("user")]  # test_role FIXME: This sucks so bad
+            roles=[user_role]
         )
         usr2 = User.create(
             username="usr2",

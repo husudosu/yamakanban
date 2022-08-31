@@ -157,11 +157,8 @@ def test_invalid_remove_member(app, client, test_users, test_boards):
         usr1: User = User.find_user("usr1")
 
         resp_forbidden = client.delete(
-            f"/api/v1/board/{test_board.id}/member",
+            f"/api/v1/board/{test_board.id}/member/{usr1.id}",
             headers={"Authorization": f"Bearer {tokens['access_token']}"},
-            json={
-                "user_id": usr1.id,
-            }
         )
         print(resp_forbidden.json)
         assert resp_forbidden.status_code == 403
@@ -191,11 +188,8 @@ def test_valid_remove_member(app, client, test_users, test_boards):
         )
         # Remove member
         resp_remove = client.delete(
-            f"/api/v1/board/{test_board.id}/member",
-            headers={"Authorization": f"Bearer {tokens['access_token']}"},
-            json={
-                "user_id": usr2.id
-            }
+            f"/api/v1/board/{test_board.id}/member/{usr2.id}",
+            headers={"Authorization": f"Bearer {tokens['access_token']}"}
         )
         assert resp_remove.status_code == 200
 

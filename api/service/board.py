@@ -234,9 +234,9 @@ def update_member_role(
 def remove_member(current_user: User, board: Board, user: User):
     board_user = board.get_board_user(current_user.id)
     # You can't remove yourself
-    if board_user.user_id == user.id:
-        raise ValidationError({"user_id": ["You can't remove yourself."]})
     if not board_user or not board_user.role.is_admin:
         raise Forbidden()
+    if board_user.user_id == user.id:
+        raise ValidationError({"user_id": ["You can't remove yourself."]})
 
     db.session.delete(board.get_board_user(user.id))

@@ -61,8 +61,7 @@ def post_card(current_user: User, board_list: BoardList, data: dict) -> Card:
     if (
         board_list.board.has_permission(
             current_user.id, BoardPermission.CARD_EDIT
-        ) or
-        current_user.has_role("admin")
+        )
     ):
         card = Card(owner_id=current_user.id, **data)
         position_max = db.engine.execute(
@@ -191,8 +190,9 @@ def delete_card(current_user: User, card: Card):
         Forbidden: Don't have permission to delete card
     """
     if (
-        card.board_list.board.is_user_can_access(current_user.id) or
-        current_user.has_role("admin")
+        card.board_list.board.has_permission(
+            current_user.id, BoardPermission.CARD_EDIT
+        )
     ):
         db.session.delete(card)
     else:
