@@ -23,17 +23,20 @@ user_schema = UserSchema()
 guest_user_schema = UserSchema(
     only=(
         "id", "username", "name",
-        "avatar_url", "timezone"
+        "avatar_url", "timezone",
+        "roles",
     )
 )
 update_user_schema = UserSchema(
+    # FIXME: Dont't know why name field needed here, name required is False!
     partial=("username", "password", "email",),
     exclude=("roles",)
 )
 register_user_schema = UserSchema(
     exclude=("current_password", "roles",)
 )
-update_user_schema_admin = UserSchema(partial=True)
+update_user_schema_admin = UserSchema(
+    partial=True, exclude=("current_password",))
 reset_password_schema = ResetPasswordSchema()
 
 

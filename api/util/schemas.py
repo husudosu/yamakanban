@@ -23,12 +23,12 @@ class UserSchema(SQLAlchemySchema):
 
     id = fields.Integer(dump_only=True)
     username = fields.String(validate=validate.Length(3, 255), required=True)
-    name = fields.String()
-    avatar_url = fields.String()
+    name = fields.String(allow_none=True)
+    avatar_url = fields.String(required=False, allow_none=True)
     password = fields.String(
         validate=validate.Length(3, 255), required=True, load_only=True)
     current_password = fields.String(
-        validate=validate.Length(3, 255), required=True, load_only=True)
+        required=True, load_only=True)
 
     email = fields.Email(required=True)
 
@@ -78,6 +78,7 @@ class UserSchema(SQLAlchemySchema):
 
     class Meta:
         model = user.User
+        unknown = EXCLUDE
 
 
 class CardMemberSchema(SQLAlchemySchema):
