@@ -1,10 +1,14 @@
+import json
 import typing
 from werkzeug.exceptions import Forbidden
 from api.app import db
 from api.model import BoardPermission, CardActivityEvent
 from api.model.user import User
 from api.model.list import BoardList
-from api.model.card import Card, CardActivity, CardComment, CardChecklist, CardListChange
+from api.model.card import (
+    Card, CardActivity, CardComment, CardChecklist, ChecklistItem
+)
+from api.util.schemas import ChecklistItemSchema
 
 
 def get_card(current_user: User, card_id: int) -> Card:
@@ -105,13 +109,23 @@ def patch_card(current_user: User, card: Card, data: dict) -> Card:
     ):
         for key, value in data.items():
             if key == "list_id" and card.list_id != value:
+                # Get target list id
+                target_list = BoardList.get_or_404(value)
                 activity = CardActivity(
                     user_id=current_user.id,
                     event=CardActivityEvent.CARD_MOVE_TO_LIST.value,
                     entity_id=card.id,
-                    list_change=CardListChange(
-                        from_list_id=card.list_id,
-                        to_list_id=value,
+                    changes=json.dumps(
+                        {
+                            "from": {
+                                "id": card.list_id,
+                                "title": card.board_list.title
+                            },
+                            "to": {
+                                "id": value,
+                                "title": target_list.title
+                            }
+                        }
                     )
                 )
                 card.activities.append(activity)
@@ -206,3 +220,41 @@ def get_card_activities(current_user: User, card: Card):
     ):
         return card.activities
     raise Forbidden()
+
+
+def post_card_checklist(
+    current_user: User,
+    card: Card,
+    data: dict
+) -> CardChecklist:
+    raise NotImplemented()
+
+
+def delete_card_checklist(
+    current_user: User,
+    checklist: CardChecklist
+):
+    raise NotImplemented()
+
+
+def add_checklist_item(
+    current_user: User,
+    checklist: CardChecklist,
+    data: dict
+) -> ChecklistItem:
+    raise NotImplemented()
+
+
+def patch_checklist_item(
+    current_user: User,
+    item: ChecklistItem,
+    data: dict
+) -> ChecklistItem:
+    raise NotImplemented()
+
+
+def delete_checklist_item(
+    current_user: User,
+    item: ChecklistItem
+):
+    pass

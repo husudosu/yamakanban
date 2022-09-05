@@ -1,3 +1,4 @@
+from crypt import methods
 from flask import Blueprint, jsonify, request
 from flask_jwt_extended import jwt_required, current_user
 
@@ -114,3 +115,33 @@ def get_card_activities(card_id: int):
         current_user,
         Card.get_or_404(card_id)
     ), many=True))
+
+
+@card_bp.route("/card/<card_id>/checklist", methods=["POST"])
+@jwt_required()
+def post_checklist(card_id: int):
+    raise NotImplemented()
+
+
+@card_bp.route("/checklist/<checklist_id>", methods=["DELETE"])
+@jwt_required()
+def delete_checklist(checklist_id: int):
+    raise NotImplemented()
+
+
+@card_bp.route("/checklist/<checklist_id>/item", methods=["POST"])
+@jwt_required()
+def post_checklist_item(checklist_id: int):
+    raise NotImplemented()
+
+
+@card_bp.route("/checklist/item/<item_id>", methods=["PATCH"])
+@jwt_required()
+def patch_checklist_item(item_id: int):
+    raise NotImplemented()
+
+
+@card_bp.route("/checklist/item/<item_id>", methods=["DELETE"])
+@jwt_required()
+def delete_checklist_item(item_id: int):
+    raise NotImplemented()

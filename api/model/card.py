@@ -21,6 +21,7 @@ class CardActivity(db.Model, BaseMixin):
 
     entity_id = sqla.Column(sqla.Integer)
     event = sqla.Column(sqla.SmallInteger, nullable=False)
+    changes = sqla.Column(sqla.Text, default="{}")
 
     # Card
     card = sqla_orm.relationship("Card", uselist=False)
@@ -28,37 +29,12 @@ class CardActivity(db.Model, BaseMixin):
     # User
     user = sqla_orm.relationship("User", uselist=False)
 
-    # Relationships
-    list_change = sqla_orm.relationship(
-        "CardListChange", cascade="all, delete-orphan", uselist=False
-    )
     comment = sqla_orm.relationship(
         "CardComment", cascade="all, delete-orphan", uselist=False,
     )
     member = sqla_orm.relationship(
         "CardMember", cascade="all, delete-orphan", uselist=False,
     )
-    checklist = sqla_orm.relationship(
-        "CardChecklist", cascade="all, delete-orphan", uselist=False,
-    )
-    checklist_item = sqla_orm.relationship(
-        "ChecklistItem", cascade="all, delete-orphan", uselist=False,
-    )
-
-
-class CardListChange(db.Model, BaseMixin):
-    """Card moved to to other list event"""
-    __tablename__ = "card_list_assignment"
-
-    id = sqla.Column(sqla.Integer, primary_key=True)
-    activity_id = sqla.Column(
-        sqla.Integer, sqla.ForeignKey("card_activity.id"))
-
-    from_list_id = sqla.Column(sqla.Integer, sqla.ForeignKey("list.id"))
-    to_list_id = sqla.Column(sqla.Integer, sqla.ForeignKey("list.id"))
-
-    from_list = sqla_orm.relationship("BoardList", foreign_keys=[from_list_id])
-    to_list = sqla_orm.relationship("BoardList", foreign_keys=[to_list_id])
 
 
 class CardMember(db.Model, BaseMixin):
@@ -93,6 +69,7 @@ class CardChecklist(db.Model, BaseMixin):
 
     __tablename__ = "card_checklist"
     id = sqla.Column(sqla.Integer, primary_key=True)
+    card_id = sqla.Column(sqla.Integer, sqla.ForeignKey("card.id"))
     activity_id = sqla.Column(
         sqla.Integer, sqla.ForeignKey("card_activity.id"))
 
@@ -143,4 +120,7 @@ class Card(db.Model, BaseMixin):
         "CardActivity", cascade="all, delete-orphan",
         back_populates="card",
         order_by="desc(CardActivity.activity_on)"
+    )
+    checklists = sqla_orm.relationship(
+        "CardChecklist", cascade="all, delete-orphan",
     )

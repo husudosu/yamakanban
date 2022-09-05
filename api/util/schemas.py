@@ -9,7 +9,7 @@ from marshmallow_sqlalchemy.fields import Nested
 from api.model.board import (
     Board, BoardAllowedUser, BoardRole, BoardRolePermission
 )
-from api.model.card import Card, CardActivity, CardComment, CardListChange
+from api.model.card import Card, CardActivity, CardChecklist, CardComment, ChecklistItem
 from api.model.list import BoardList
 from ..model import CardActivityEvent, user
 
@@ -106,22 +106,6 @@ class CardCommentSchema(SQLAlchemySchema):
         model = CardComment
 
 
-class CardListChangeSchema(SQLAlchemySchema):
-    id = fields.Integer(dump_only=True)
-    # activity_id = fields.Integer(dump_only=True)
-    from_list_id = fields.Integer(dump_only=True)
-    to_list_id = fields.Integer(dump_only=True)
-
-    # FIXME: This just a workaround to get boardlist, find better solution!
-    from_list = fields.Nested(
-        Schema.from_dict({"title": fields.String(dump_only=True)}))
-    to_list = fields.Nested(
-        Schema.from_dict({"title": fields.String(dump_only=True)}))
-
-    class Meta:
-        model = CardListChange
-
-
 class CardActivitySchema(SQLAlchemySchema):
     id = fields.Integer(dump_only=True)
     card_id = fields.Integer()
@@ -130,14 +114,15 @@ class CardActivitySchema(SQLAlchemySchema):
     entity_id = fields.Integer()
     event = fields.Integer(dump_only=True)
 
+    changes = fields.String(dump_only=True)
+
     comment = fields.Nested(CardCommentSchema, dump_only=True)
     member = fields.Nested(CardMemberSchema, dump_only=True)
-
     user = fields.Nested(
         UserSchema(only=("name", "email", "avatar_url", "username",)),
         dump_only=True
     )
-    list_change = Nested(CardListChangeSchema, dump_only=True)
+    # list_change = Nested(CardListChangeSchema, dump_only=True)
 
     def remove_fields(self, exclude: typing.Tuple):
         """Removes fields from schema to prevent unnecessary SQL calls"""
@@ -182,6 +167,29 @@ class CardActivitySchema(SQLAlchemySchema):
         return retval
 
 
+class ChecklistItemSchema(SQLAlchemySchema):
+    id = fields.Integer(dump_only=True)
+    activity_id = fields.Integer(dump_only=True)
+    checklist_id = fields.Integer(dump_only=True)
+
+    title = fields.String(required=True)
+    completed = fields.Boolean(load_default=False, allow_none=False)
+
+    class Meta:
+        model = ChecklistItem
+        unknown = EXCLUDE
+
+
+class CardChecklistSchema(SQLAlchemySchema):
+    id = fields.Integer(dump_only=True)
+    activity_id = fields.Integer(dump_only=True)
+    items = fields.Nested(ChecklistItemSchema, many=True)
+
+    class Meta:
+        model = CardChecklist
+        unknown = EXCLUDE
+
+
 class CardSchema(SQLAlchemySchema):
     id = fields.Integer(dump_only=True)
     list_id = fields.Integer()
@@ -207,7 +215,7 @@ class BoardListSchema(SQLAlchemySchema):
     cards = fields.Nested(
         CardSchema,
         many=True,
-        only=("id", "title", "position",),
+        only=("id", "title", "position", "list_id",),
         dump_only=True
     )
 
