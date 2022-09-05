@@ -118,11 +118,11 @@ class CardActivitySchema(SQLAlchemySchema):
 
     comment = fields.Nested(CardCommentSchema, dump_only=True)
     member = fields.Nested(CardMemberSchema, dump_only=True)
+    # TODO: Do not get user here!
     user = fields.Nested(
         UserSchema(only=("name", "email", "avatar_url", "username",)),
         dump_only=True
     )
-    # list_change = Nested(CardListChangeSchema, dump_only=True)
 
     def remove_fields(self, exclude: typing.Tuple):
         """Removes fields from schema to prevent unnecessary SQL calls"""
@@ -154,7 +154,7 @@ class CardActivitySchema(SQLAlchemySchema):
                 self.load_fields = copy.deepcopy(original_load_fields)
 
                 if entry.event == CardActivityEvent.CARD_COMMENT.value:
-                    self.remove_fields(("member", "list_change",))
+                    self.remove_fields(("member",))
                 elif entry.event == CardActivityEvent.CARD_MOVE_TO_LIST.value:
                     self.remove_fields(("member", "comment",))
                 retval.append(super().dump(entry, many=False))
@@ -169,7 +169,6 @@ class CardActivitySchema(SQLAlchemySchema):
 
 class ChecklistItemSchema(SQLAlchemySchema):
     id = fields.Integer(dump_only=True)
-    activity_id = fields.Integer(dump_only=True)
     checklist_id = fields.Integer(dump_only=True)
 
     title = fields.String(required=True)
@@ -182,8 +181,11 @@ class ChecklistItemSchema(SQLAlchemySchema):
 
 class CardChecklistSchema(SQLAlchemySchema):
     id = fields.Integer(dump_only=True)
-    activity_id = fields.Integer(dump_only=True)
-    items = fields.Nested(ChecklistItemSchema, many=True)
+    card_id = fields.Integer(dump_only=True)
+
+    title = fields.String(allow_none=True)
+
+    items = fields.Nested(ChecklistItemSchema, many=True, dump_only=True)
 
     class Meta:
         model = CardChecklist

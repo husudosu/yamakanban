@@ -3,6 +3,7 @@ import typing
 from werkzeug.exceptions import Forbidden
 from api.app import db
 from api.model import BoardPermission, CardActivityEvent
+from api.model.board import BoardAllowedUser
 from api.model.user import User
 from api.model.list import BoardList
 from api.model.card import (
@@ -73,16 +74,6 @@ def post_card(current_user: User, board_list: BoardList, data: dict) -> Card:
         ).fetchone()
         if position_max[0] is not None:
             card.position = position_max[0] + 1
-        board_list.cards.append(card)
-
-        # Create activity object
-        # card.activities.append(
-        #     CardActivity(
-        #         user_id=current_user.id,
-        #         event=CardActivityEvent.CARD_ASSIGN_TO_LIST.value,
-        #         entity_id=board_list.id
-        #     )
-        # )
         return card
     raise Forbidden()
 
@@ -227,14 +218,73 @@ def post_card_checklist(
     card: Card,
     data: dict
 ) -> CardChecklist:
-    raise NotImplemented()
+    board_user: BoardAllowedUser = card.board_list.board.get_board_user(
+        current_user.id)
+    if (
+        board_user and
+        board_user.has_permission(BoardPermission.CHECKLIST_CREATE)
+    ):
+        # Create checklist
+        checklist = CardChecklist(card_id=card.id, **data)
+
+        # Card activity
+        card.activities.append(
+            CardActivity(
+                user_id=current_user.id,
+                event=CardActivityEvent.CHECKLIST_CREATE.value,
+                entity_id=card.id,
+                changes=json.dumps({
+                    "to": {
+                        "title": checklist.title
+                    }
+                })
+            )
+        )
+        return checklist
+    raise Forbidden()
+
+
+def patch_card_checklist(
+    current_user: User,
+    checklist: CardChecklist,
+    data: dict
+) -> CardChecklist:
+    # TODO: Maybe we should find better way to get board_user.
+    board_user: BoardAllowedUser = \
+        checklist.card.board_list.board.get_board_user(
+            current_user.id
+        )
+    if (
+        board_user and
+        board_user.has_permission(BoardPermission.CHECKLIST_EDIT)
+    ):
+        checklist.update(**data)
+        return checklist
+    raise Forbidden()
 
 
 def delete_card_checklist(
     current_user: User,
     checklist: CardChecklist
 ):
-    raise NotImplemented()
+    # TODO: Maybe we should find better way to get board_user.
+    board_user: BoardAllowedUser = \
+        checklist.card.board_list.board.get_board_user(
+            current_user.id
+        )
+    if (
+        board_user and
+        board_user.has_permission(BoardPermission.CHECKLIST_EDIT)
+    ):
+        db.session.delete(checklist)
+        checklist.card.activities.append(
+            CardActivity(
+                user_id=current_user.id,
+                event=CardActivityEvent.CHECKLIST_DELETE.value
+            )
+        )
+    else:
+        raise Forbidden()
 
 
 def add_checklist_item(

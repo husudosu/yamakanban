@@ -40,9 +40,17 @@ class BoardPermission(enum.Enum):
     LIST_DELETE = "list.delete"
     BOARD_UPDATE = "board.update"
     BOARD_DELETE = "board.delete"
+    CHECKLIST_CREATE = "checklist.create"
+    CHECKLIST_EDIT = "checklist.edit"
 
 
 class CardActivityEvent(RestEnum):
     CARD_ASSIGN_TO_LIST = 1
     CARD_MOVE_TO_LIST = 2
     CARD_COMMENT = 3
+    CHECKLIST_CREATE = 4
+    CHECKLIST_UPDATE = 5
+    CHECKLIST_DELETE = 6
+    CHECKLIST_ITEM_MARKED_COMPLETE = 7
+    CHECKLIST_ITEM_DUE_DATE = 8
+    CHECKLIST_ITEM_USER_ASSIGN = 9

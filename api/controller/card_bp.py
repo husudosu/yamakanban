@@ -1,19 +1,24 @@
 from crypt import methods
+from tabnanny import check
 from flask import Blueprint, jsonify, request
 from flask_jwt_extended import jwt_required, current_user
 
 from api.app import db
-from api.model.card import Card, CardComment
+from api.model.card import Card, CardChecklist, CardComment
 from api.model.list import BoardList
 
 from api.service import card as card_service
-from api.util.schemas import CardActivitySchema, CardSchema, CardCommentSchema
+from api.util.schemas import (
+    CardActivitySchema, CardChecklistSchema, CardSchema, CardCommentSchema
+)
 
 card_bp = Blueprint("card_bp", __name__)
 
 card_schema = CardSchema()
 card_comment_schema = CardCommentSchema()
 card_activity_schema = CardActivitySchema()
+
+checklist_schema = CardChecklistSchema()
 
 
 @card_bp.route("/list/<list_id>/card", methods=["GET"])
@@ -120,13 +125,38 @@ def get_card_activities(card_id: int):
 @card_bp.route("/card/<card_id>/checklist", methods=["POST"])
 @jwt_required()
 def post_checklist(card_id: int):
-    raise NotImplemented()
+    checklist = card_service.post_card_checklist(
+        current_user,
+        Card.get_or_404(card_id),
+        checklist_schema.load(request.json)
+    )
+    db.session.add(checklist)
+    db.session.commit()
+    return checklist_schema.dump(checklist)
+
+
+@card_bp.route("/checklist/<checklist_id>", methods=["PATCH"])
+@jwt_required()
+def patch_checklist(checklist_id: int):
+    checklist = card_service.patch_card_checklist(
+        current_user,
+        CardChecklist.get_or_404(checklist_id),
+        checklist_schema.load(request.json)
+    )
+    db.session.commit()
+    db.session.refresh(checklist)
+    return checklist_schema.dump(checklist)
 
 
 @card_bp.route("/checklist/<checklist_id>", methods=["DELETE"])
 @jwt_required()
 def delete_checklist(checklist_id: int):
-    raise NotImplemented()
+    card_service.delete_card_checklist(
+        current_user,
+        CardChecklist.get_or_404(checklist_id)
+    )
+    db.session.commit()
+    return {}
 
 
 @card_bp.route("/checklist/<checklist_id>/item", methods=["POST"])
