@@ -32,10 +32,7 @@ def get_user_boards(current_user: User) -> List[Board]:
 
 def get_board(current_user: User, board_id: int = None) -> Board:
     board = Board.get_or_404(board_id)
-    if (
-        board.is_user_can_access(current_user.id) or
-        current_user.has_role("admin")
-    ):
+    if board.is_user_can_access(current_user.id):
         return board
     raise Forbidden()
 
@@ -68,7 +65,7 @@ def patch_board(current_user: User, board: Board, data: dict) -> Board:
     Returns:
         Board: Updated board ORM object
     """
-    if board.owner_id == current_user.id or current_user.has_role("admin"):
+    if board.owner_id == current_user.id:
         board.update(**data)
         return board
     raise Forbidden()
@@ -84,7 +81,7 @@ def delete_board(current_user: User, board: Board):
     Raises:
         Forbidden: User has no access to this board
     """
-    if board.owner_id == current_user.id or current_user.has_role("admin"):
+    if board.owner_id == current_user.id:
         db.session.delete(board)
     else:
         raise Forbidden()
@@ -93,10 +90,7 @@ def delete_board(current_user: User, board: Board):
 def update_boardlists_position(
     current_user: User, board: Board, data: typing.List[int]
 ):
-    if (
-        board.is_user_can_access(current_user.id) or
-        current_user.has_role("admin")
-    ):
+    if board.is_user_can_access(current_user.id):
         for index, item in enumerate(data):
             db.session.query(BoardList).filter(
                 sqla.and_(

@@ -5,7 +5,29 @@ import sqlalchemy.orm as sqla_orm
 from api.app import db
 from . import BaseMixin
 
-# TODO: replace user_id with board_user_id!
+'''
+TODO: Add board_id to:
+- Card
+- Checklist
+- ChecklistItem
+Why need it?
+For permission checking we require to get BoardAllowedUser by using
+get_board_user method of board model. It seems more efficent to store board
+id on multiple places and run less queries to check permissions of board user.
+
+Example:
+When patching Checklistitem:
+We should go through:
+    - checklist
+    - card 
+    - list
+to reach board.
+Of course we also need query (maybe we can do caching here):
+    - Board allowed user,
+    - Board role,
+    - Board role permission -> permission,
+This seems at least 6 queries for me just to do permission checking
+'''
 
 
 class CardActivity(db.Model, BaseMixin):
@@ -65,11 +87,16 @@ class ChecklistItem(db.Model, BaseMixin):
     assigned_user_id = sqla.Column(
         sqla.Integer, sqla.ForeignKey("user.id")
     )
+    board_id = sqla.Column(
+        sqla.Integer, sqla.ForeignKey("board.id"), nullable=False
+    )
 
     title = sqla.Column(sqla.Text)
     due_date = sqla.Column(sqla.DateTime)
     completed = sqla.Column(sqla.Boolean, default=False, nullable=False)
     marked_complete_on = sqla.Column(sqla.DateTime)
+
+    board = sqla_orm.relationship("Board")
 
 
 class CardChecklist(db.Model, BaseMixin):
@@ -78,7 +105,9 @@ class CardChecklist(db.Model, BaseMixin):
     __tablename__ = "card_checklist"
     id = sqla.Column(sqla.Integer, primary_key=True)
     card_id = sqla.Column(sqla.Integer, sqla.ForeignKey("card.id"))
-
+    board_id = sqla.Column(
+        sqla.Integer, sqla.ForeignKey("board.id"), nullable=False
+    )
     title = sqla.Column(sqla.Text)
 
     items = sqla_orm.relationship(
@@ -86,6 +115,7 @@ class CardChecklist(db.Model, BaseMixin):
     card = sqla_orm.relationship(
         "Card", back_populates="checklists"
     )
+    board = sqla_orm.relationship("Board")
 
 
 class CardComment(db.Model, BaseMixin):
@@ -94,6 +124,9 @@ class CardComment(db.Model, BaseMixin):
     user_id = sqla.Column(sqla.Integer, sqla.ForeignKey("user.id"))
     activity_id = sqla.Column(
         sqla.Integer, sqla.ForeignKey("card_activity.id"))
+    board_id = sqla.Column(
+        sqla.Integer, sqla.ForeignKey("board.id"), nullable=False
+    )
 
     comment = sqla.Column(sqla.Text)
 
@@ -103,6 +136,7 @@ class CardComment(db.Model, BaseMixin):
     updated = sqla.Column(sqla.DateTime)
 
     activity = sqla_orm.relationship("CardActivity", back_populates="comment")
+    board = sqla_orm.relationship("Board")
 
     def update(self, **kwargs):
         self.update(**kwargs)
@@ -118,6 +152,9 @@ class Card(db.Model, BaseMixin):
         sqla.Integer, sqla.ForeignKey("list.id"), nullable=False)
     owner_id = sqla.Column(
         sqla.Integer, sqla.ForeignKey("user.id"), nullable=False)
+    board_id = sqla.Column(
+        sqla.Integer, sqla.ForeignKey("board.id"), nullable=False
+    )
 
     title = sqla.Column(sqla.Text, nullable=False)
     description = sqla.Column(sqla.Text)
@@ -135,3 +172,4 @@ class Card(db.Model, BaseMixin):
     checklists = sqla_orm.relationship(
         "CardChecklist", cascade="all, delete-orphan",
     )
+    board = sqla_orm.relationship("Board")

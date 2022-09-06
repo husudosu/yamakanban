@@ -3,13 +3,11 @@ import typing
 from werkzeug.exceptions import Forbidden
 from api.app import db
 from api.model import BoardPermission, CardActivityEvent
-from api.model.board import BoardAllowedUser
 from api.model.user import User
 from api.model.list import BoardList
 from api.model.card import (
     Card, CardActivity, CardComment, CardChecklist, ChecklistItem
 )
-from api.util.schemas import ChecklistItemSchema
 
 
 def get_card(current_user: User, card_id: int) -> Card:
@@ -23,11 +21,7 @@ def get_card(current_user: User, card_id: int) -> Card:
         Card: Card ORM object.
     """
     card = Card.get_or_404(card_id)
-    can_access = (
-        card.board_list.board.is_user_can_access(current_user.id) or
-        current_user.has_role("admin")
-    )
-    if can_access:
+    if card.board.is_user_can_access(current_user.id):
         return card
     raise Forbidden()
 
@@ -43,8 +37,7 @@ def get_cards(current_user: User, board_list: BoardList) -> typing.List[Card]:
         typing.List[Card]: List of cards
     """
     if (
-        board_list.board.is_user_can_access(current_user.id) or
-        current_user.has_role("admin")
+        board_list.board.is_user_can_access(current_user.id)
     ):
         return board_list.cards
     raise Forbidden()
@@ -68,7 +61,11 @@ def post_card(current_user: User, board_list: BoardList, data: dict) -> Card:
             current_user.id, BoardPermission.CARD_EDIT
         )
     ):
-        card = Card(owner_id=current_user.id, **data)
+        card = Card(
+            owner_id=current_user.id,
+            board_id=board_list.board_id,
+            **data
+        )
         position_max = db.engine.execute(
             f"SELECT MAX(position) FROM card WHERE list_id={board_list.id}"
         ).fetchone()
@@ -93,10 +90,9 @@ def patch_card(current_user: User, card: Card, data: dict) -> Card:
         Card: Updated card ORM object
     """
     if (
-        card.board_list.board.has_permission(
+        card.board.has_permission(
             current_user.id, BoardPermission.CARD_EDIT
-        ) or
-        current_user.has_role("admin")
+        )
     ):
         for key, value in data.items():
             if key == "list_id" and card.list_id != value:
@@ -131,12 +127,15 @@ def post_card_comment(
     current_user: User, card: Card, data: dict
 ) -> CardActivity:
     if (
-        card.board_list.board.has_permission(
+        card.board.has_permission(
             current_user.id, BoardPermission.CARD_COMMENT
-        ) or
-        current_user.has_role("admin")
+        )
     ):
-        comment = CardComment(user_id=current_user.id, **data)
+        comment = CardComment(
+            user_id=current_user.id,
+            board_id=card.board_id,
+            **data
+        )
         activity = CardActivity(
             user_id=current_user.id,
             event=CardActivityEvent.CARD_COMMENT.value,
@@ -153,12 +152,12 @@ def patch_card_comment(
 ) -> CardComment:
     user_can_edit = (
         comment.user_id == current_user.id and
-        comment.card.board_list.board.is_user_can_access(current_user.id)
+        comment.board.has_permission(
+            current_user.id,
+            BoardPermission.CARD_COMMENT
+        )
     )
-    if (
-        user_can_edit or
-        current_user.has_role("admin")
-    ):
+    if (user_can_edit):
         comment.update(**data)
         comment.card.activities.append(
             CardActivity(
@@ -175,10 +174,7 @@ def delete_card_comment(current_user: User, comment: CardComment):
         comment.card.board_list.board.is_user_can_access(current_user.id)
     )
 
-    if (
-        user_can_delete or
-        current_user.has_role("admin")
-    ):
+    if (user_can_delete):
         comment.delete()
     else:
         raise Forbidden()
@@ -205,10 +201,7 @@ def delete_card(current_user: User, card: Card):
 
 
 def get_card_activities(current_user: User, card: Card):
-    if (
-        card.board_list.board.is_user_can_access(current_user.id) or
-        current_user.has_role("admin")
-    ):
+    if card.board.is_user_can_access(current_user.id):
         return card.activities
     raise Forbidden()
 
@@ -218,14 +211,16 @@ def post_card_checklist(
     card: Card,
     data: dict
 ) -> CardChecklist:
-    board_user: BoardAllowedUser = card.board_list.board.get_board_user(
-        current_user.id)
     if (
-        board_user and
-        board_user.has_permission(BoardPermission.CHECKLIST_CREATE)
+        card.board.has_permission(
+            current_user.id, BoardPermission.CHECKLIST_CREATE)
     ):
         # Create checklist
-        checklist = CardChecklist(card_id=card.id, **data)
+        checklist = CardChecklist(
+            card_id=card.id,
+            board_id=card.board_id,
+            **data
+        )
 
         # Card activity
         card.activities.append(
@@ -249,14 +244,9 @@ def patch_card_checklist(
     checklist: CardChecklist,
     data: dict
 ) -> CardChecklist:
-    # TODO: Maybe we should find better way to get board_user.
-    board_user: BoardAllowedUser = \
-        checklist.card.board_list.board.get_board_user(
-            current_user.id
-        )
     if (
-        board_user and
-        board_user.has_permission(BoardPermission.CHECKLIST_EDIT)
+        checklist.board.has_permission(
+            current_user.id, BoardPermission.CHECKLIST_EDIT)
     ):
         checklist.update(**data)
         return checklist
@@ -267,14 +257,9 @@ def delete_card_checklist(
     current_user: User,
     checklist: CardChecklist
 ):
-    # TODO: Maybe we should find better way to get board_user.
-    board_user: BoardAllowedUser = \
-        checklist.card.board_list.board.get_board_user(
-            current_user.id
-        )
     if (
-        board_user and
-        board_user.has_permission(BoardPermission.CHECKLIST_EDIT)
+        checklist.board.has_permission(
+            current_user.id, BoardPermission.CHECKLIST_EDIT)
     ):
         db.session.delete(checklist)
         checklist.card.activities.append(
@@ -287,12 +272,19 @@ def delete_card_checklist(
         raise Forbidden()
 
 
-def add_checklist_item(
+def post_checklist_item(
     current_user: User,
     checklist: CardChecklist,
     data: dict
 ) -> ChecklistItem:
-    raise NotImplemented()
+    if (
+        checklist.board.has_permission(
+            current_user.id, BoardPermission.CHECKLIST_EDIT)
+    ):
+        item = ChecklistItem(**data)
+        checklist.items.append(item)
+        return item
+    raise Forbidden()
 
 
 def patch_checklist_item(
@@ -307,4 +299,4 @@ def delete_checklist_item(
     current_user: User,
     item: ChecklistItem
 ):
-    pass
+    raise NotImplemented()

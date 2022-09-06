@@ -1,5 +1,3 @@
-from crypt import methods
-from tabnanny import check
 from flask import Blueprint, jsonify, request
 from flask_jwt_extended import jwt_required, current_user
 
@@ -19,6 +17,7 @@ card_comment_schema = CardCommentSchema()
 card_activity_schema = CardActivitySchema()
 
 checklist_schema = CardChecklistSchema()
+checklist_new_schema = CardChecklistSchema(only=("title",))
 
 
 @card_bp.route("/list/<list_id>/card", methods=["GET"])
@@ -113,6 +112,7 @@ def delete_card_comment(comment_id: int):
     return {}
 
 
+# TODO: Should convert activities results to paginated.
 @card_bp.route("/card/<card_id>/activities", methods=["GET"])
 @jwt_required()
 def get_card_activities(card_id: int):
@@ -162,7 +162,14 @@ def delete_checklist(checklist_id: int):
 @card_bp.route("/checklist/<checklist_id>/item", methods=["POST"])
 @jwt_required()
 def post_checklist_item(checklist_id: int):
-    raise NotImplemented()
+    item = card_service.post_checklist_item(
+        current_user,
+        CardChecklist.get_or_404(checklist_id).
+        request.json,
+    )
+    db.session.commit()
+    db.session.refresh(item)
+    return checklist_schema.dump(item)
 
 
 @card_bp.route("/checklist/item/<item_id>", methods=["PATCH"])

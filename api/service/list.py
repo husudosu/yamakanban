@@ -4,6 +4,7 @@ import sqlalchemy as sqla
 
 
 from api.app import db
+from api.model import BoardPermission
 from api.model.card import Card
 from api.model.user import User
 from api.model.list import BoardList
@@ -22,11 +23,7 @@ def get_board_lists(
 
 
 def post_board_list(current_user: User, board: Board, data: dict) -> BoardList:
-    # TODO: Add board permission checking too!
-    if (
-        board.is_user_can_access(current_user.id) or
-        current_user.has_role("admin")
-    ):
+    if board.has_permission(current_user.id, BoardPermission.LIST_CREATE):
         # TODO Add activity log entry too!
         boardlist = BoardList(**data)
         board.lists.append(boardlist)
@@ -38,10 +35,9 @@ def post_board_list(current_user: User, board: Board, data: dict) -> BoardList:
 def patch_board_list(
     current_user: User, board_list: BoardList, data: dict
 ) -> BoardList:
-    # TODO: Add board permission checking too!
     if (
-        board_list.board.is_user_can_access(current_user.id) or
-        current_user.has_role("admin")
+        board_list.board.has_permission(
+            current_user.id, BoardPermission.LIST_EDIT)
     ):
         # TODO Add activity log entry too!
         board_list.update(**data)
@@ -50,10 +46,9 @@ def patch_board_list(
 
 
 def delete_board_list(current_user: User, board_list: BoardList):
-    # TODO: Add board permission checking too!
     if (
-        board_list.board.is_user_can_access(current_user.id) or
-        current_user.has_role("admin")
+        board_list.board.has_permission(
+            current_user.id, BoardPermission.LIST_DELETE)
     ):
         # Make CardListChange event from_list_id, to_list_id to null
         # db.session.query(CardListChange).filter(
@@ -72,8 +67,8 @@ def update_cards_position(
     current_user: User, board_list: BoardList, data: typing.List[int]
 ):
     if (
-        board_list.board.is_user_can_access(current_user.id) or
-        current_user.has_role("admin")
+        board_list.board.has_permission(
+            current_user.id, BoardPermission.LIST_DELETE)
     ):
         for index, item in enumerate(data):
             db.session.query(Card).filter(

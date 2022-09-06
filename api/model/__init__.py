@@ -42,6 +42,7 @@ class BoardPermission(enum.Enum):
     BOARD_DELETE = "board.delete"
     CHECKLIST_CREATE = "checklist.create"
     CHECKLIST_EDIT = "checklist.edit"
+    CHECKLIST_ITEM_MARK = "checklist_item.mark"
 
 
 class CardActivityEvent(RestEnum):
