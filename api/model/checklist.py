@@ -24,7 +24,7 @@ class ChecklistItem(db.Model, BaseMixin):
     due_date = sqla.Column(sqla.DateTime)
     completed = sqla.Column(sqla.Boolean, default=False, nullable=False)
     marked_complete_on = sqla.Column(sqla.DateTime)
-
+    position = sqla.Column(sqla.SmallInteger, default=0)
     board = sqla_orm.relationship("Board")
 
 
@@ -40,7 +40,10 @@ class CardChecklist(db.Model, BaseMixin):
     title = sqla.Column(sqla.Text)
 
     items = sqla_orm.relationship(
-        "ChecklistItem", cascade="all, delete-orphan")
+        "ChecklistItem",
+        cascade="all, delete-orphan",
+        order_by="asc(ChecklistItem.position)"
+    )
     card = sqla_orm.relationship(
         "Card", back_populates="checklists"
     )

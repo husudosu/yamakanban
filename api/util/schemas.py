@@ -178,6 +178,7 @@ class ChecklistItemSchema(SQLAlchemySchema):
     due_date = fields.DateTime(allow_none=True)
     completed = fields.Boolean(load_default=False, allow_none=False)
     marked_complete_on = fields.DateTime(allow_none=True)
+    position = fields.Integer()
 
     class Meta:
         model = ChecklistItem
