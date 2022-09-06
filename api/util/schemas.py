@@ -205,6 +205,7 @@ class CardSchema(SQLAlchemySchema):
     description = fields.String()
     due_date = fields.DateTime(required=False)
     position = fields.Integer()
+    checklists = fields.Nested(CardChecklistSchema, many=True)
 
     class Meta:
         model = Card

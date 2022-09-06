@@ -279,7 +279,6 @@ def delete_card_checklist(
 
 def validate_user(board_id: int, fieldname: str, user_id: int) -> typing.Dict:
     # TODO: Need better SQL side validation than this
-    # TODO: Maybe move validation to marshmallow schema.
     usr = User.query.get(user_id)
     errors = {}
     if not usr:
@@ -306,19 +305,21 @@ def post_checklist_item(
             current_user.id, BoardPermission.CHECKLIST_EDIT)
     ):
         errors = {}
+        assigned_user = None
+
         # Validate some SQL sutff if required.
         if data.get("marked_complete_user_id"):
-            errors.update(validate_user(
-                checklist.board_id,
-                "marked_complete_user_id",
-                data["marked_complete_user_id"]
-            ))
+            if not checklist.board.get_board_user(data["marked_complete_user_id"]):
+                errors["marked_complete_user_id"] = [
+                    "User not exists or not member of board!"]
+
         if data.get("assigned_user_id"):
-            errors.update(validate_user(
-                checklist.board_id,
-                "assigned_user_id",
-                data["assigned_user_id"]
-            ))
+            assigned_user = checklist.board.get_board_user(
+                data["assigned_user_id"])
+
+            if not assigned_user:
+                errors["assigned_user_id"] = [
+                    "User not exists or not member of board!"]
 
         if len(errors.keys()) > 0:
             raise ValidationError(errors)
@@ -327,6 +328,7 @@ def post_checklist_item(
             **data
         )
         checklist.items.append(item)
+        # TODO Send Email notification for assigned user
         return item
     raise Forbidden()
 
@@ -336,17 +338,35 @@ def patch_checklist_item(
     item: ChecklistItem,
     data: dict
 ) -> ChecklistItem:
+    errors = {}
     if item.board.has_permission(
             current_user.id, BoardPermission.CHECKLIST_EDIT):
         # User can update everything
-        # TODO: Put SQL validation code here.
+
+        # SQL validation
+        if data.get("marked_complete_user_id"):
+            if not item.board.get_board_user(data["marked_complete_user_id"]):
+                errors["marked_complete_user_id"] = [
+                    "User not exists or not member of board!"]
+
+        if data.get("assigned_user_id"):
+            assigned_user = item.board.get_board_user(
+                data["assigned_user_id"])
+
+            if not assigned_user:
+                errors["assigned_user_id"] = [
+                    "User not exists or not member of board!"]
+
+        if len(errors.keys()) > 0:
+            raise ValidationError(errors)
         item.update(**data)
         return item
     elif item.board_has_permission(
             current_user.id, BoardPermission.CHECKLIST_ITEM_MARK):
         # Only allow marking for member
         # TODO: raise forbidden if there's other fields on data
-        pass
+        item.update(marked_complete_on=data["marked_complete_on"])
+        return item
     raise Forbidden()
 
 

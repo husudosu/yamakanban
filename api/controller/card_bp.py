@@ -180,7 +180,7 @@ def patch_checklist_item(item_id: int):
     item = card_service.patch_checklist_item(
         current_user,
         ChecklistItem.get_or_404(item_id),
-        checklist_item_schema.load(request.json)
+        checklist_item_schema.load(request.json, partial=True)
     )
     db.session.commit()
     db.session.refresh(item)
