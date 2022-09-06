@@ -63,11 +63,13 @@ def create_app() -> Flask:
     from .controller.board_bp import board_bp
     from .controller.list_bp import list_bp
     from .controller.card_bp import card_bp
+    from .controller.checklist_bp import checklist_bp
 
     api_bp.register_blueprint(user_bp)
     api_bp.register_blueprint(board_bp)
     api_bp.register_blueprint(list_bp)
     api_bp.register_blueprint(card_bp)
+    api_bp.register_blueprint(checklist_bp)
 
     app.register_blueprint(api_bp)
 

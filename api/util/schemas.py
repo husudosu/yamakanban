@@ -9,7 +9,8 @@ from marshmallow_sqlalchemy.fields import Nested
 from api.model.board import (
     Board, BoardAllowedUser, BoardRole, BoardRolePermission
 )
-from api.model.card import Card, CardActivity, CardChecklist, CardComment, ChecklistItem
+from api.model.card import Card, CardActivity, CardComment
+from api.model.checklist import ChecklistItem, CardChecklist
 from api.model.list import BoardList
 from ..model import CardActivityEvent, user
 
