@@ -1,8 +1,13 @@
 import json
 import typing
 from werkzeug.exceptions import Forbidden
+
+from marshmallow.exceptions import ValidationError
+import sqlalchemy as sqla
+
 from api.app import db
 from api.model import BoardPermission, CardActivityEvent
+from api.model.board import BoardAllowedUser
 from api.model.user import User
 from api.model.list import BoardList
 from api.model.card import (
@@ -272,6 +277,25 @@ def delete_card_checklist(
         raise Forbidden()
 
 
+def validate_user(board_id: int, fieldname: str, user_id: int) -> typing.Dict:
+    # TODO: Need better SQL side validation than this
+    # TODO: Maybe move validation to marshmallow schema.
+    usr = User.query.get(user_id)
+    errors = {}
+    if not usr:
+        errors[fieldname] = ["User not exists."]
+    else:
+        if not BoardAllowedUser.query.filter(
+            sqla._and(
+                BoardAllowedUser.user_id == usr.id,
+                BoardAllowedUser.board_id == board_id
+            )
+        ).first():
+            errors[fieldname] = [
+                "User not member of board."]
+    return errors
+
+
 def post_checklist_item(
     current_user: User,
     checklist: CardChecklist,
@@ -281,7 +305,27 @@ def post_checklist_item(
         checklist.board.has_permission(
             current_user.id, BoardPermission.CHECKLIST_EDIT)
     ):
-        item = ChecklistItem(**data)
+        errors = {}
+        # Validate some SQL sutff if required.
+        if data.get("marked_complete_user_id"):
+            errors.update(validate_user(
+                checklist.board_id,
+                "marked_complete_user_id",
+                data["marked_complete_user_id"]
+            ))
+        if data.get("assigned_user_id"):
+            errors.update(validate_user(
+                checklist.board_id,
+                "assigned_user_id",
+                data["assigned_user_id"]
+            ))
+
+        if len(errors.keys()) > 0:
+            raise ValidationError(errors)
+        item = ChecklistItem(
+            board_id=checklist.board_id,
+            **data
+        )
         checklist.items.append(item)
         return item
     raise Forbidden()
@@ -292,11 +336,26 @@ def patch_checklist_item(
     item: ChecklistItem,
     data: dict
 ) -> ChecklistItem:
-    raise NotImplemented()
+    if item.board.has_permission(
+            current_user.id, BoardPermission.CHECKLIST_EDIT):
+        # User can update everything
+        # TODO: Put SQL validation code here.
+        item.update(**data)
+        return item
+    elif item.board_has_permission(
+            current_user.id, BoardPermission.CHECKLIST_ITEM_MARK):
+        # Only allow marking for member
+        # TODO: raise forbidden if there's other fields on data
+        pass
+    raise Forbidden()
 
 
 def delete_checklist_item(
     current_user: User,
     item: ChecklistItem
 ):
-    raise NotImplemented()
+    if item.board.has_permission(
+            current_user.id, BoardPermission.CHECKLIST_EDIT):
+        db.session.delete(item)
+    else:
+        raise Forbidden()

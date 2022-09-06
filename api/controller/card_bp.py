@@ -2,12 +2,13 @@ from flask import Blueprint, jsonify, request
 from flask_jwt_extended import jwt_required, current_user
 
 from api.app import db
-from api.model.card import Card, CardChecklist, CardComment
+from api.model.card import Card, CardChecklist, CardComment, ChecklistItem
 from api.model.list import BoardList
 
 from api.service import card as card_service
 from api.util.schemas import (
-    CardActivitySchema, CardChecklistSchema, CardSchema, CardCommentSchema
+    CardActivitySchema, CardChecklistSchema, CardSchema, CardCommentSchema,
+    ChecklistItemSchema
 )
 
 card_bp = Blueprint("card_bp", __name__)
@@ -18,6 +19,7 @@ card_activity_schema = CardActivitySchema()
 
 checklist_schema = CardChecklistSchema()
 checklist_new_schema = CardChecklistSchema(only=("title",))
+checklist_item_schema = ChecklistItemSchema()
 
 
 @card_bp.route("/list/<list_id>/card", methods=["GET"])
@@ -164,21 +166,32 @@ def delete_checklist(checklist_id: int):
 def post_checklist_item(checklist_id: int):
     item = card_service.post_checklist_item(
         current_user,
-        CardChecklist.get_or_404(checklist_id).
-        request.json,
+        CardChecklist.get_or_404(checklist_id),
+        checklist_item_schema.load(request.json),
     )
     db.session.commit()
     db.session.refresh(item)
-    return checklist_schema.dump(item)
+    return checklist_item_schema.dump(item)
 
 
 @card_bp.route("/checklist/item/<item_id>", methods=["PATCH"])
 @jwt_required()
 def patch_checklist_item(item_id: int):
-    raise NotImplemented()
+    item = card_service.patch_checklist_item(
+        current_user,
+        ChecklistItem.get_or_404(item_id),
+        checklist_item_schema.load(request.json)
+    )
+    db.session.commit()
+    db.session.refresh(item)
+    return checklist_item_schema.dump(item)
 
 
 @card_bp.route("/checklist/item/<item_id>", methods=["DELETE"])
 @jwt_required()
 def delete_checklist_item(item_id: int):
-    raise NotImplemented()
+    card_service.delete_checklist_item(
+        current_user,
+        ChecklistItem.get_or_404(item_id)
+    )
+    return {}

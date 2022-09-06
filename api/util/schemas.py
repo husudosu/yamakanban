@@ -170,9 +170,13 @@ class CardActivitySchema(SQLAlchemySchema):
 class ChecklistItemSchema(SQLAlchemySchema):
     id = fields.Integer(dump_only=True)
     checklist_id = fields.Integer(dump_only=True)
+    marked_complete_user_id = fields.Integer()
+    assigned_user_id = fields.Integer()
 
     title = fields.String(required=True)
+    due_date = fields.DateTime(allow_none=True)
     completed = fields.Boolean(load_default=False, allow_none=False)
+    marked_complete_on = fields.DateTime(allow_none=True)
 
     class Meta:
         model = ChecklistItem
