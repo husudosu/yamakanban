@@ -125,10 +125,19 @@ def post_checklist_item(
 
         if len(errors.keys()) > 0:
             raise ValidationError(errors)
+
         item = ChecklistItem(
             board_id=checklist.board_id,
             **data
         )
+
+        # Calculate position
+        position_max = db.engine.execute(
+            f"SELECT MAX(position) FROM card_checklist_item WHERE checklist_id={checklist.id}"
+        ).fetchone()
+        if position_max[0] is not None:
+            item.position = position_max[0] + 1
+
         checklist.items.append(item)
         # TODO Send Email notification for assigned user
         return item

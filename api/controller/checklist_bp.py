@@ -84,4 +84,5 @@ def delete_checklist_item(item_id: int):
         current_user,
         ChecklistItem.get_or_404(item_id)
     )
+    db.session.commit()
     return {}
