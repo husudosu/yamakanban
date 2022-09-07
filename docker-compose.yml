@@ -11,6 +11,26 @@ services:
             - "production.env"
         ports:
             - "5432:5432"
+    todoman:
+        restart: unless-stopped
+        command: ./boot.sh
+        hostname: todoman
+        container_name: todoman
+        build:
+            context: .
+            dockerfile: ./dockerfile
+        volumes:
+            - todoman_data:/root/data
+        env_file:
+            - "production.env"
+        ports:
+            - "80:80"
+        depends_on:
+            - todoman_db
+        links:
+            - todoman_db
 volumes:
     sql:
+        driver: local
+    todoman_data:
         driver: local

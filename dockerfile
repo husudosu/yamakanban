@@ -11,7 +11,6 @@ RUN apt update && \
     libpq-dev \
     python3-dev \
     nginx \
-    build-essential \
     supervisor -y
 
 WORKDIR /root
@@ -30,12 +29,6 @@ COPY migrations migrations
 COPY frontend/dist dist
 COPY ./configs/nginx/http /etc/nginx/sites-enabled/default
 COPY ./configs/nginx/nginx.conf /etc/nginx/nginx.conf
-
-# Self-signed cert
-COPY ./configs/nginx/nginx-selfsigned.key /etc/ssl/private/nginx-selfsigned.key
-COPY ./configs/nginx/nginx-selfsigned.crt /etc/ssl/certs/nginx-selfsigned.crt
-COPY ./configs/nginx/snippets/self-signed.conf /etc/nginx/snippets/self-signed.conf
-COPY ./configs/nginx/dhparam.pem /etc/nginx/dhparam.pem
 
 RUN chmod 777 boot.sh
 

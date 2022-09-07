@@ -1,7 +1,7 @@
 server {
-    listen 40080;
-    listen 40443 ssl;
-    include snippets/self-signed.conf;
+    listen 80;
+    # listen 40443 ssl;
+    # include snippets/self-signed.conf;
     root /root/dist;
     index index.html;
     location / {
