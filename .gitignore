@@ -167,3 +167,6 @@ production.env
 .vscode
 .idea
 profile
+
+# Board background container
+api/static/backgrounds/*.*

@@ -58,7 +58,8 @@ def create_app() -> Flask:
     mail.init_app(app)
 
     # Create the API base blueprint
-    api_bp = Blueprint("api_bp", __name__, url_prefix="/api/v1")
+    api_bp = Blueprint("api_bp", __name__, url_prefix="/api/v1",
+                       static_folder="static")
     from .controller.user_bp import user_bp
     from .controller.board_bp import board_bp
     from .controller.list_bp import list_bp
