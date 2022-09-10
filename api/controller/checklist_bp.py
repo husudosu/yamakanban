@@ -86,3 +86,15 @@ def delete_checklist_item(item_id: int):
     )
     db.session.commit()
     return {}
+
+
+@checklist_bp.route("/checklist/<checklist_id>/items-order", methods=["PATCH"])
+@jwt_required()
+def patch_checklist_items_order(checklist_id: int):
+    checklist_service.update_items_position(
+        current_user,
+        CardChecklist.get_or_404(checklist_id),
+        request.json
+    )
+    db.session.commit()
+    return {}

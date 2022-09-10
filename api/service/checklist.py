@@ -190,3 +190,16 @@ def delete_checklist_item(
         db.session.delete(item)
     else:
         raise Forbidden()
+
+
+def update_items_position(
+    current_user: User, checklist: CardChecklist, data: typing.List[int]
+):
+    if checklist.board.is_user_can_access(current_user.id):
+        for index, item in enumerate(data):
+            db.session.query(ChecklistItem).filter(
+                sqla.and_(
+                    ChecklistItem.id == item,
+                    ChecklistItem.checklist_id == checklist.id
+                )
+            ).update({"position": index})
