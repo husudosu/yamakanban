@@ -1,3 +1,4 @@
+from datetime import datetime
 import typing
 import json
 
@@ -144,6 +145,46 @@ def post_checklist_item(
     raise Forbidden()
 
 
+def checklist_item_process_changes(
+    current_user: User, item: ChecklistItem, data: dict
+):
+    """Processes data changes of checklist item, creates card activities
+    based on data changes.
+
+    Args:
+        current_user (User): Current logged in user
+        item (ChecklistItem): Checklist item to process
+        data (dict): Data got from request
+    """
+    if (
+        data.get("completed") is not None and
+        data["completed"] != item.completed
+    ):
+        # Checklist item marked
+        activity = CardActivity(
+            user_id=current_user.id,
+            event=CardActivityEvent.CHECKLIST_ITEM_MARKED,
+            entity_id=item.id,
+            changes=json.dumps(
+                {
+                    "to": {
+                        "title": item.title,
+                        "completed": data["completed"]
+                    }
+                }
+            )
+        )
+        item.checklist.card.activities.append(activity)
+        # Update details
+        if data["completed"]:
+            item.marked_complete_user_id = current_user.id
+            item.marked_complete_on = datetime.utcnow()
+        else:
+            item.marked_complete_user_id = None
+            item.marked_complete_on = None
+    # TODO: Add all checklist item events here!
+
+
 def patch_checklist_item(
     current_user: User,
     item: ChecklistItem,
@@ -170,13 +211,17 @@ def patch_checklist_item(
 
         if len(errors.keys()) > 0:
             raise ValidationError(errors)
+
+        checklist_item_process_changes(current_user, item, data)
+
         item.update(**data)
         return item
     elif item.board_has_permission(
             current_user.id, BoardPermission.CHECKLIST_ITEM_MARK):
         # Only allow marking for member
         # TODO: raise forbidden if there's other fields on data
-        item.update(marked_complete_on=data["marked_complete_on"])
+        checklist_item_process_changes(current_user, item, data)
+        item.update(completed=data["completed"])
         return item
     raise Forbidden()
 

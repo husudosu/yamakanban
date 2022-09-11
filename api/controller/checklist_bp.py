@@ -9,6 +9,7 @@ from api.util.schemas import CardChecklistSchema, ChecklistItemSchema
 
 checklist_bp = Blueprint("checklist_bp", __name__)
 
+
 checklist_schema = CardChecklistSchema()
 checklist_new_schema = CardChecklistSchema(only=("title",))
 checklist_item_schema = ChecklistItemSchema()

@@ -27,6 +27,10 @@ class ChecklistItem(db.Model, BaseMixin):
     position = sqla.Column(sqla.SmallInteger, default=0)
     board = sqla_orm.relationship("Board")
 
+    checklist = sqla_orm.relationship("CardChecklist", back_populates="items")
+    marked_complete_user = sqla_orm.relationship(
+        "User", foreign_keys=[marked_complete_user_id], uselist=False)
+
 
 class CardChecklist(db.Model, BaseMixin):
     """Card checklist"""
