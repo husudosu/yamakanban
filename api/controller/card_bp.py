@@ -17,6 +17,13 @@ card_comment_schema = CardCommentSchema()
 card_activity_schema = CardActivitySchema()
 
 
+@card_bp.route("/card/<card_id>", methods=["GET"])
+@jwt_required()
+def get_card(card_id: int):
+    card = card_service.get_card(current_user, card_id)
+    return card_schema.dump(card)
+
+
 @card_bp.route("/list/<list_id>/card", methods=["GET"])
 @jwt_required()
 def get_list_cards(list_id: int):

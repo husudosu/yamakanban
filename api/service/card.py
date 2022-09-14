@@ -13,6 +13,20 @@ from api.model.card import (
 )
 
 
+def get_card(current_user: User, card_id: int) -> Card:
+    """Gets card if user can access the board
+    Args:
+        current_user (User): Current user
+        card_id (int): Card ID:
+    Returns:
+        Card: Card ORM object.
+    """
+    card = Card.get_or_404(card_id)
+    if card.board.is_user_can_access(current_user.id):
+        return card
+    raise Forbidden()
+
+
 def get_cards(current_user: User, board_list: BoardList) -> typing.List[Card]:
     """Gets cards from board list
 
