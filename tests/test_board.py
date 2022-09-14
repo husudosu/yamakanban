@@ -17,11 +17,22 @@ def test_get_boards(client, test_users, test_boards):
     assert len(resp.json) == 3
 
 
-def test_get_board_allowed(app, client, test_users, test_boards):
+def test_get_board(app, client, test_users, test_boards):
     # ! Only allow getting board info if available for user.
     with app.app_context():
-        test_board = Board.query.get(1)
         tokens = do_login(client, "usr1", "usr1")
+        test_board = Board.query.get(1)
+
+        # usr1 has no access to board 3
+        board3 = Board.query.get(3)
+
+        resp_forbidden = client.get(
+            f"/api/v1/board/{board3.id}",
+            headers={"Authorization": f"Bearer {tokens['access_token']}"}
+        )
+        assert resp_forbidden.status_code == 403
+
+        # Test forbidden
         resp = client.get(
             f"/api/v1/board/{test_board.id}",
             headers={"Authorization": f"Bearer {tokens['access_token']}"}
@@ -33,17 +44,6 @@ def test_get_board_allowed(app, client, test_users, test_boards):
         assert resp.json["owner_id"] == test_board.owner_id
         assert resp.json["background_image"] == test_board.background_image
         assert resp.json["background_color"] == test_board.background_color
-
-
-def test_get_board_forbidden(app, client, test_users, test_boards):
-    with app.app_context():
-        tokens = do_login(client, "usr2", "usr2")
-        test_board = Board.query.get(1)
-        resp = client.get(
-            f"/api/v1/board/{test_board.id}",
-            headers={"Authorization": f"Bearer {tokens['access_token']}"}
-        )
-        assert resp.status_code == 403
 
 
 def test_create_board(app, client, test_users):
@@ -99,72 +99,7 @@ def test_delete_board(app, client, test_users, test_boards):
         assert resp.status_code == 200
 
 
-# Member add/ remove from board
-def test_invalid_add_member(app, client, test_users, test_boards):
-    with app.app_context():
-        usr2_tokens = do_login(client, "usr2", "usr2")
-        usr_tokens = do_login(client, "usr1", "usr1")
-        test_board: Board = Board.query.get(1)
-        usr1: User = User.find_user("usr1")
-        usr2: User = User.find_user("usr2")
-
-        resp_forbidden = client.post(
-            f"/api/v1/board/{test_board.id}/member",
-            headers={"Authorization": f"Bearer {usr2_tokens['access_token']}"},
-            json={
-                "user_id": usr2.id,
-                "board_id": test_board.id,
-                "board_role_id": test_board.board_roles[0].id
-            }
-        )
-        assert resp_forbidden.status_code == 403
-
-        # You don't allowed add yourself again.
-        resp_add_myself = client.post(
-            f"/api/v1/board/{test_board.id}/member",
-            headers={"Authorization": f"Bearer {usr_tokens['access_token']}"},
-            json={
-                "user_id": usr1.id,
-                "board_id": test_board.id,
-                "board_role_id": test_board.board_roles[0].id
-            }
-        )
-        assert resp_add_myself.status_code == 400
-
-
-def test_valid_add_member(app, client, test_users, test_boards):
-    with app.app_context():
-        tokens = do_login(client, "usr1", "usr1")
-        test_board: Board = Board.query.get(1)
-        usr2: User = User.find_user("usr2")
-
-        resp_valid = client.post(
-            f"/api/v1/board/{test_board.id}/member",
-            headers={"Authorization": f"Bearer {tokens['access_token']}"},
-            json={
-                "user_id": usr2.id,
-                "board_id": test_board.id,
-                "board_role_id": test_board.board_roles[0].id
-            }
-        )
-        assert resp_valid.status_code == 200
-
-
-def test_invalid_remove_member(app, client, test_users, test_boards):
-    with app.app_context():
-        tokens = do_login(client, "usr2", "usr2")
-        test_board: Board = Board.query.get(1)
-        usr1: User = User.find_user("usr1")
-
-        resp_forbidden = client.delete(
-            f"/api/v1/board/{test_board.id}/member/{usr1.id}",
-            headers={"Authorization": f"Bearer {tokens['access_token']}"},
-        )
-        print(resp_forbidden.json)
-        assert resp_forbidden.status_code == 403
-
-
-def test_valid_remove_member(app, client, test_users, test_boards):
+def test_remove_member(app, client, test_users, test_boards):
     with app.app_context():
         '''
         Expected behaviour:
@@ -173,22 +108,31 @@ def test_valid_remove_member(app, client, test_users, test_boards):
             - The user can't delete own access from board.
         '''
         tokens = do_login(client, "usr1", "usr1")
-        test_board: Board = Board.query.get(1)
+        board1: Board = Board.query.get(1)
+        board3: Board = Board.query.get(3)
         usr2: User = User.find_user("usr2")
+        usr1: User = User.find_user("usr1")
+
+        # Forbidden
+        resp_forbidden = client.delete(
+            f"/api/v1/board/{board3.id}/member/{usr1.id}",
+            headers={"Authorization": f"Bearer {tokens['access_token']}"},
+        )
+        assert resp_forbidden.status_code == 403
 
         # Add a valid member
         client.post(
-            f"/api/v1/board/{test_board.id}/member",
+            f"/api/v1/board/{board1.id}/member",
             headers={"Authorization": f"Bearer {tokens['access_token']}"},
             json={
                 "user_id": usr2.id,
-                "board_id": test_board.id,
-                "board_role_id": test_board.board_roles[0].id
+                "board_id": board1.id,
+                "board_role_id": board1.board_roles[0].id
             }
         )
         # Remove member
         resp_remove = client.delete(
-            f"/api/v1/board/{test_board.id}/member/{usr2.id}",
+            f"/api/v1/board/{board1.id}/member/{usr2.id}",
             headers={"Authorization": f"Bearer {tokens['access_token']}"}
         )
         assert resp_remove.status_code == 200
@@ -196,7 +140,7 @@ def test_valid_remove_member(app, client, test_users, test_boards):
         # Check if it's deleted.
         usr2_tokens = do_login(client, "usr2", "usr2")
         resp_forbidden = client.get(
-            f"/api/v1/board/{test_board.id}",
+            f"/api/v1/board/{board1.id}",
             headers={"Authorization": f"Bearer {usr2_tokens['access_token']}"}
         )
         assert resp_forbidden.status_code == 403
@@ -262,3 +206,141 @@ def test_board_roles(app, client, test_users, test_boards):
             headers={"Authorization": f"Bearer {tokens['access_token']}"}
         )
         assert resp_roles_forbidden.status_code == 403
+
+
+def test_find_member(app, client, test_users, test_boards):
+    with app.app_context():
+        usr1_tokens = do_login(client, "usr1", "usr1")
+        usr2: User = User.find_user("usr2")
+
+        # usr1 has access to 1
+        board1: Board = Board.query.get(1)
+        # usr1 and usr2 (as observer) has access to board 2
+        board2: Board = Board.query.get(2)
+        board2_observer: BoardRole = BoardRole.query.filter(
+            sqla.and_(
+                BoardRole.board_id == board2.id,
+                BoardRole.name == "Observer"
+            )
+        ).first()
+        assert board2_observer is not None
+        # usr1 has no access to 3
+        board3: Board = Board.query.get(3)
+
+        # usr1 has no access to board: 3
+        resp_forbidden = client.post(
+            f"/api/v1/board/{board3.id}/find-member",
+            headers={"Authorization": f"Bearer {usr1_tokens['access_token']}"},
+            json={
+                "user_id": usr2.id
+            }
+        )
+        assert resp_forbidden.status_code == 403
+
+        # usr1 has access to board 1 but specified user not member of board
+        resp_allowed_not_found = client.post(
+            f"/api/v1/board/{board1.id}/find-member",
+            headers={"Authorization": f"Bearer {usr1_tokens['access_token']}"},
+            json={
+                "user_id": usr2.id
+            }
+        )
+
+        assert resp_allowed_not_found.status_code == 404
+
+        # usr1 has access to board 2 and usr2 is observer
+        resp_allowed_success = client.post(
+            f"/api/v1/board/{board2.id}/find-member",
+            headers={"Authorization": f"Bearer {usr1_tokens['access_token']}"},
+            json={
+                "user_id": usr2.id
+            }
+        )
+        assert resp_allowed_success.status_code == 200
+        assert resp_allowed_success.json["board_id"] == board2.id
+        assert resp_allowed_success.json["board_role_id"] == board2_observer.id
+
+        # Get all members
+
+        # usr1 has no access to 3
+        resp_getall_forbidden = client.get(
+            f"/api/v1/board/{board3.id}/member",
+            headers={"Authorization": f"Bearer {usr1_tokens['access_token']}"},
+        )
+        assert resp_getall_forbidden.status_code == 403
+
+        # usr1 has access to board 1
+        resp_allowed_getall = client.get(
+            f"/api/v1/board/{board1.id}/member",
+            headers={"Authorization": f"Bearer {usr1_tokens['access_token']}"},
+        )
+
+        assert resp_allowed_getall.status_code == 200
+        assert len(resp_allowed_getall.json) == 1
+
+
+def test_add_member(app, client, test_users, test_boards):
+    with app.app_context():
+        usr1_tokens = do_login(client, "usr1", "usr1")
+        usr2: User = User.find_user("usr2")
+
+        # usr1 has access to 1
+        board1: Board = Board.query.get(1)
+        board1_observer: BoardRole = BoardRole.query.filter(
+            sqla.and_(
+                BoardRole.board_id == board1.id,
+                BoardRole.name == "Observer"
+            )
+        ).first()
+        assert board1_observer is not None
+        # usr1 has no access to 3
+        board3: Board = Board.query.get(3)
+        board3_observer: BoardRole = BoardRole.query.filter(
+            sqla.and_(
+                BoardRole.board_id == board3.id,
+                BoardRole.name == "Observer"
+            )
+        ).first()
+
+        # TODO: Need to check board allowed user before anything! Read below
+        # creating a decorator would be the best for this task.
+        # for now providing valid role id
+
+        test_data_board1 = {
+            "user_id": usr2.id,
+            "board_role_id": board1_observer.id
+        }
+        test_data_board3 = {
+            "user_id": usr2.id,
+            "board_role_id": board3_observer.id
+        }
+        test_data_invalid = {
+            "user_id": usr2.id,
+            "board_role_id": 400
+        }
+        # usr1 has no access to 3
+        resp_forbidden = client.post(
+            f"/api/v1/board/{board3.id}/member",
+            headers={"Authorization": f"Bearer {usr1_tokens['access_token']}"},
+            json=test_data_board3
+        )
+        assert resp_forbidden.status_code == 403
+
+        # usr1 has access to 1
+        # invalid board_role_id
+        resp_invalid = client.post(
+            f"/api/v1/board/{board1.id}/member",
+            headers={"Authorization": f"Bearer {usr1_tokens['access_token']}"},
+            json=test_data_invalid
+        )
+        assert resp_invalid.status_code == 404
+
+        # valid add member request
+        resp_valid = client.post(
+            f"/api/v1/board/{board1.id}/member",
+            headers={"Authorization": f"Bearer {usr1_tokens['access_token']}"},
+            json=test_data_board1
+        )
+        assert resp_valid.status_code == 200
+        assert resp_valid.json["user_id"] == test_data_board1["user_id"]
+        assert resp_valid.json["board_role_id"] == test_data_board1["board_role_id"]

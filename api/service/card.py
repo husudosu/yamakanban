@@ -1,7 +1,7 @@
 import json
 import typing
 from werkzeug.exceptions import Forbidden
-
+from marshmallow.exceptions import ValidationError
 
 from api.app import db
 from api.model import BoardPermission, CardActivityEvent
@@ -11,22 +11,6 @@ from api.model.list import BoardList
 from api.model.card import (
     Card, CardActivity, CardComment
 )
-
-
-def get_card(current_user: User, card_id: int) -> Card:
-    """Gets card if user can access the board
-
-    Args:
-        current_user (User): Current user
-        card_id (int): Card ID:
-
-    Returns:
-        Card: Card ORM object.
-    """
-    card = Card.get_or_404(card_id)
-    if card.board.is_user_can_access(current_user.id):
-        return card
-    raise Forbidden()
 
 
 def get_cards(current_user: User, board_list: BoardList) -> typing.List[Card]:
@@ -65,9 +49,10 @@ def post_card(current_user: User, board_list: BoardList, data: dict) -> Card:
         )
     ):
         card = Card(
+            **data,
             owner_id=current_user.id,
             board_id=board_list.board_id,
-            **data
+            list_id=board_list.id,
         )
         position_max = db.engine.execute(
             f"SELECT MAX(position) FROM card WHERE list_id={board_list.id}"
@@ -100,7 +85,12 @@ def patch_card(current_user: User, card: Card, data: dict) -> Card:
         for key, value in data.items():
             if key == "list_id" and card.list_id != value:
                 # Get target list id
-                target_list = BoardList.get_or_404(value)
+                target_list: BoardList = BoardList.get_or_404(value)
+
+                if target_list.board_id != card.board_id:
+                    raise ValidationError(
+                        {"list_id": ["Cannot move card to other board!"]})
+
                 activity = CardActivity(
                     user_id=current_user.id,
                     event=CardActivityEvent.CARD_MOVE_TO_LIST.value,

@@ -139,21 +139,11 @@ def get_board_members(board_id: int):
 @jwt_required()
 def add_board_member(board_id: int):
     data = board_allowed_user_schema.load(request.json)
-
-    # Check if the provided board_role_id is assigned to our board.
-    role = BoardRole.query.filter(
-        sqla.and_(
-            BoardRole.id == data["board_role_id"],
-            BoardRole.board_id == board_id
-        )
-    ).first()
-    if not role:
-        abort(404, "Board role not exists.")
     member = board_service.add_member(
         current_user,
         Board.get_or_404(board_id),
         User.get_or_404(data["user_id"]),
-        role
+        BoardRole.get_board_role_or_404(board_id, data["board_role_id"])
     )
     db.session.commit()
     return board_allowed_user_schema.dump(member)
@@ -163,20 +153,12 @@ def add_board_member(board_id: int):
 @jwt_required()
 def update_board_member(board_id: int, user_id: int):
     # TODO: Create marshmallow schema for loading data!
-    role = BoardRole.query.filter(
-        sqla.and_(
-            BoardRole.board_id == board_id,
-            BoardRole.id == request.json["board_role_id"]
-        )
-    ).first()
-
-    if not role:
-        abort(404, "Board role not exists.")
     member = board_service.update_member_role(
         current_user,
         Board.get_or_404(board_id),
         User.get_or_404(user_id),
-        role
+        BoardRole.get_board_role_or_404(
+            board_id, request.json["board_role_id"])
     )
     db.session.commit()
     db.session.refresh(member)

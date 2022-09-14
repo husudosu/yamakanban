@@ -56,13 +56,6 @@ def patch_list_card(card_id: int):
     return card_schema.dump(updated_card)
 
 
-@card_bp.route("/card/<card_id>", methods=["GET"])
-@jwt_required()
-def get_card(card_id: int):
-    card = card_service.get_card(current_user, card_id)
-    return card_schema.dump(card)
-
-
 @card_bp.route("/card/<card_id>", methods=["DELETE"])
 @jwt_required()
 def delete_list_card(card_id: int):

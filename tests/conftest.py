@@ -168,27 +168,11 @@ def test_boardlists(app, test_boards):
 
 
 @pytest.fixture()
-def test_lists(app, test_boards):
-    """Creates 5 lists for every board."""
-    with app.app_context():
-        boards: typing.List[Board] = Board.query.all()
-
-        for board in boards:
-            for _ in range(0, 5):
-                factory.create_list(board.owner, board)
-        db.session.commit()
-
-
-@pytest.fixture()
-def test_cards(app, test_lists):
+def test_cards(app, test_boardlists):
     """Creates cards with various activites. Creates for every existing list"""
     with app.app_context():
         lists: typing.List[BoardList] = BoardList.query.all()
         for list in lists:
-            for _ in range(0, 5):
-                card = factory.create_card(list.board.owner, list)
-
-                # Create comments for card
-                for _ in range(0, 5):
-                    factory.create_comment(list.board.owner, card)
-                db.session.commit()
+            db.session.add_all([factory.create_card(list.board.owner, list)
+                                for _ in range(0, 5)])
+            db.session.commit()

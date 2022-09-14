@@ -181,7 +181,7 @@ def test_user_patch_me(client, test_users):
 
     assert resp_invalid.status_code == 400
     # Role editing for regular user should be disabled
-    assert "roles" in resp_invalid.json["errors"].keys()
+    assert "current_password" in resp_invalid.json["errors"].keys()
 
     valid_edit_missing_pw = client.patch(
         "/api/v1/auth/users/me",

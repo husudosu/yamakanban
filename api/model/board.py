@@ -2,7 +2,7 @@
 import typing
 import sqlalchemy as sqla
 import sqlalchemy.orm as sqla_orm
-
+from werkzeug.exceptions import NotFound
 from api.app import db
 from . import BaseMixin, BoardPermission
 
@@ -27,6 +27,18 @@ class BoardRole(db.Model, BaseMixin):
 
     permissions = sqla_orm.relationship(
         "BoardRolePermission", cascade="all, delete-orphan")
+
+    @classmethod
+    def get_board_role_or_404(cls, board_id: int, role_id: int):
+        role = cls.query.filter(
+            sqla.and_(
+                cls.id == role_id,
+                cls.board_id == board_id
+            )
+        ).first()
+        if not role:
+            raise NotFound("BoardRole not found")
+        return role
 
 
 class BoardAllowedUser(db.Model, BaseMixin):
