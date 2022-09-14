@@ -44,7 +44,7 @@ class CardActivity(db.Model, BaseMixin):
     )
 
     entity_id = sqla.Column(sqla.Integer)
-    event = sqla.Column(sqla.SmallInteger, nullable=False)
+    event = sqla.Column(sqla.SmallInteger, nullable=False)  # CardActivityEvent
     changes = sqla.Column(sqla.Text, default="{}")
 
     # Card

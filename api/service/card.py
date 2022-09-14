@@ -2,6 +2,7 @@ import json
 import typing
 from werkzeug.exceptions import Forbidden
 from marshmallow.exceptions import ValidationError
+import sqlalchemy as sqla
 
 from api.app import db
 from api.model import BoardPermission, CardActivityEvent
@@ -207,7 +208,28 @@ def delete_card(current_user: User, card: Card):
         raise Forbidden()
 
 
-def get_card_activities(current_user: User, card: Card):
-    if card.board.is_user_can_access(current_user.id):
-        return card.activities
-    raise Forbidden()
+def get_card_activities(current_user: User, card: Card, args: dict = {}):
+    if not card.board.is_user_can_access(current_user.id):
+        raise Forbidden()
+
+    # Query and paginate
+    query = CardActivity.query.filter(CardActivity.card_id == card.id)
+    # Checks type
+    if args["type"] == "comment":
+        query = query.filter(CardActivity.event ==
+                             CardActivityEvent.CARD_COMMENT.value)
+
+    # Sortby
+    sortby = args.get("sort_by")
+    if sortby is not None:
+        order = args.get("order", "desc")
+
+        if not hasattr(CardActivity, sortby):
+            sortby = "activity_on"
+
+        if order == "asc":
+            query = query.order_by(sqla.asc(getattr(CardActivity, sortby)))
+        elif order == "desc":
+            query = query.order_by(sqla.desc(getattr(CardActivity, sortby)))
+
+    return query.paginate(args["page"], args["per_page"])

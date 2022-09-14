@@ -1,10 +1,11 @@
 import copy
 import typing
+from urllib.parse import urlencode
 
+from flask import request
 from marshmallow import (Schema, ValidationError,
                          fields, validate, validates_schema, EXCLUDE)
 from marshmallow_sqlalchemy import SQLAlchemySchema
-from marshmallow_sqlalchemy.fields import Nested
 
 from api.model.board import (
     Board, BoardAllowedUser, BoardRole, BoardRolePermission
@@ -13,6 +14,48 @@ from api.model.card import Card, CardActivity, CardComment
 from api.model.checklist import ChecklistItem, CardChecklist
 from api.model.list import BoardList
 from ..model import CardActivityEvent, user
+
+
+class PaginatedSchema(Schema):
+
+    class Meta:
+        ordered = True
+
+    links = fields.Method(serialize='get_pagination_links')
+
+    page = fields.Integer(dump_only=True)
+    pages = fields.Integer(dump_only=True)
+
+    per_page = fields.Integer(dump_only=True)
+    total = fields.Integer(dump_only=True)
+
+    @staticmethod
+    def get_url(page):
+
+        query_args = request.args.to_dict()
+        query_args['page'] = page
+        return '{}?{}'.format(request.base_url, urlencode(query_args))
+
+    def get_pagination_links(self, paginated_objects):
+        paginated_links = {
+            'first': self.get_url(page=1),
+            'last': self.get_url(page=paginated_objects.pages)
+        }
+
+        if paginated_objects.has_prev:
+            paginated_links['prev'] = self.get_url(
+                page=paginated_objects.prev_num)
+        if paginated_objects.has_next:
+            paginated_links['next'] = self.get_url(
+                page=paginated_objects.next_num)
+        return paginated_links
+
+
+class PaginatedQuerySchema(Schema):
+    page = fields.Integer(missing=1)
+    per_page = fields.Integer(missing=15)
+    sort_by = fields.String()
+    order = fields.String(validate=validate.OneOf(("asc", "desc",)))
 
 
 class ResetPasswordSchema(Schema):
@@ -166,6 +209,19 @@ class CardActivitySchema(SQLAlchemySchema):
         self.fields = copy.deepcopy(original_fields)
         self.load_fields = copy.deepcopy(original_load_fields)
         return retval
+
+
+class CardActivityPaginatedSchema(PaginatedSchema):
+    data = fields.Nested(
+        CardActivitySchema(),
+        attribute="items",
+        many=True
+    )
+
+
+class CardActivityQuerySchema(PaginatedQuerySchema):
+    type = fields.String(
+        validate=validate.OneOf(["all", "comment"]), missing="comment")
 
 
 class ChecklistItemSchema(SQLAlchemySchema):
