@@ -172,7 +172,7 @@ class ChecklistItemSchema(SQLAlchemySchema):
     id = fields.Integer(dump_only=True)
     checklist_id = fields.Integer(dump_only=True)
     marked_complete_user_id = fields.Integer(dump_only=True)
-    assigned_user_id = fields.Integer()
+    assigned_user_id = fields.Integer(allow_none=True)
 
     title = fields.String(required=True)
     due_date = fields.DateTime(allow_none=True)
@@ -225,7 +225,7 @@ class BoardListSchema(SQLAlchemySchema):
     id = fields.Integer(dump_only=True)
     board_id = fields.Integer()
     title = fields.String(required=True)
-    position = fields.Integer(required=True)
+    position = fields.Integer()
 
     cards = fields.Nested(
         CardSchema,

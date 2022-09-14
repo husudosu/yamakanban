@@ -25,9 +25,14 @@ def get_board_lists(
 def post_board_list(current_user: User, board: Board, data: dict) -> BoardList:
     if board.has_permission(current_user.id, BoardPermission.LIST_CREATE):
         # TODO Add activity log entry too!
+        position_max = db.engine.execute(
+            f"SELECT MAX(position) FROM list WHERE board_id={board.id}"
+        ).fetchone()
+
         boardlist = BoardList(**data)
+        if position_max[0] is not None:
+            boardlist.position = position_max[0] + 1
         board.lists.append(boardlist)
-        db.session.add(board)
         return boardlist
     raise Forbidden()
 
@@ -50,14 +55,6 @@ def delete_board_list(current_user: User, board_list: BoardList):
         board_list.board.has_permission(
             current_user.id, BoardPermission.LIST_DELETE)
     ):
-        # Make CardListChange event from_list_id, to_list_id to null
-        # db.session.query(CardListChange).filter(
-        #     CardListChange.from_list_id == board_list.id
-        # ).update({"from_list_id": None})
-        # db.session.query(CardListChange).filter(
-        #     CardListChange.to_list_id == board_list.id
-        # ).update({"to_list_id": None})
-
         db.session.delete(board_list)
     else:
         raise Forbidden()
