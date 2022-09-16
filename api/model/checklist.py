@@ -11,10 +11,10 @@ class ChecklistItem(db.Model, BaseMixin):
     id = sqla.Column(sqla.Integer, primary_key=True)
     checklist_id = sqla.Column(
         sqla.Integer, sqla.ForeignKey("card_checklist.id"))
-    marked_complete_user_id = sqla.Column(
-        sqla.Integer, sqla.ForeignKey("user.id"))
-    assigned_user_id = sqla.Column(
-        sqla.Integer, sqla.ForeignKey("user.id")
+    marked_complete_board_user_id = sqla.Column(
+        sqla.Integer, sqla.ForeignKey("board_allowed_user.id"))
+    assigned_board_user_id = sqla.Column(
+        sqla.Integer, sqla.ForeignKey("board_allowed_user.id")
     )
     board_id = sqla.Column(
         sqla.Integer, sqla.ForeignKey("board.id"), nullable=False
@@ -29,7 +29,10 @@ class ChecklistItem(db.Model, BaseMixin):
 
     checklist = sqla_orm.relationship("CardChecklist", back_populates="items")
     marked_complete_user = sqla_orm.relationship(
-        "User", foreign_keys=[marked_complete_user_id], uselist=False)
+        "BoardAllowedUser", foreign_keys=[marked_complete_board_user_id], uselist=False)
+    assigned_user = sqla_orm.relationship(
+        "BoardAllowedUser", foreign_keys=[assigned_board_user_id], uselist=False
+    )
 
 
 class CardChecklist(db.Model, BaseMixin):

@@ -1,5 +1,3 @@
-import copy
-import typing
 from urllib.parse import urlencode
 
 from flask import request
@@ -10,10 +8,10 @@ from marshmallow_sqlalchemy import SQLAlchemySchema
 from api.model.board import (
     Board, BoardAllowedUser, BoardRole, BoardRolePermission
 )
-from api.model.card import Card, CardActivity, CardComment
+from api.model.card import Card, CardComment
 from api.model.checklist import ChecklistItem, CardChecklist
 from api.model.list import BoardList
-from ..model import CardActivityEvent, user
+from ..model import user
 
 
 class PaginatedSchema(Schema):
@@ -125,153 +123,6 @@ class UserSchema(SQLAlchemySchema):
         unknown = EXCLUDE
 
 
-class CardMemberSchema(SQLAlchemySchema):
-    id = fields.Integer(dump_only=True)
-    board_user_id = fields.Integer(dump_only=True)
-    send_notification = fields.Boolean(required=True)
-
-    board_user = fields.Nested("BoardAllowedUserSchema", dump_only=True)
-
-
-class CardCommentSchema(SQLAlchemySchema):
-    id = fields.Integer(dump_only=True)
-    user_id = fields.Integer(dump_only=True)
-    # activity_id = fields.Integer(dump_only=True, required=True)
-    comment = fields.String(required=True)
-
-    created = fields.DateTime(dump_only=True)
-    updated = fields.DateTime(dump_only=True)
-
-    class Meta:
-        model = CardComment
-
-
-class CardActivitySchema(SQLAlchemySchema):
-    id = fields.Integer(dump_only=True)
-    card_id = fields.Integer()
-    user_id = fields.Integer()
-    activity_on = fields.DateTime("%Y-%m-%d %H:%M:%S")
-    entity_id = fields.Integer()
-    event = fields.Integer(dump_only=True)
-
-    changes = fields.String(dump_only=True)
-
-    comment = fields.Nested(CardCommentSchema, dump_only=True)
-    member = fields.Nested(CardMemberSchema, dump_only=True)
-    # TODO: Do not get user here!
-    user = fields.Nested(
-        UserSchema(only=("name", "email", "avatar_url", "username",)),
-        dump_only=True
-    )
-
-    def remove_fields(self, exclude: typing.Tuple):
-        """Removes fields from schema to prevent unnecessary SQL calls"""
-        for i in exclude:
-            self.dump_fields.pop(i, None)
-            self.fields.pop(i, None)
-            self.load_fields.pop(i, None)
-
-    def dump(
-        self,
-        obj: typing.Union[typing.List[CardActivity], CardActivity],
-        *,
-        many: typing.Union[bool, None] = None
-    ):
-        """
-        Dumps relationship based on event.
-        Prevents marshmallow-sqlalchemy doing unnecessary SQL calls.
-        """
-        original_dump = copy.deepcopy(self.dump_fields)
-        original_fields = copy.deepcopy(self.fields)
-        original_load_fields = copy.deepcopy(self.load_fields)
-        retval = None
-        if many:
-            retval = []
-            for entry in obj:
-                # Reload original stuff before removing anything.
-                self.dump_fields = copy.deepcopy(original_dump)
-                self.fields = copy.deepcopy(original_fields)
-                self.load_fields = copy.deepcopy(original_load_fields)
-
-                if entry.event == CardActivityEvent.CARD_COMMENT.value:
-                    self.remove_fields(("member",))
-                elif entry.event == CardActivityEvent.CARD_MOVE_TO_LIST.value:
-                    self.remove_fields(("member", "comment",))
-                retval.append(super().dump(entry, many=False))
-        else:
-            retval = super().dump(obj, many=False)
-
-        self.dump_fields = copy.deepcopy(original_dump)
-        self.fields = copy.deepcopy(original_fields)
-        self.load_fields = copy.deepcopy(original_load_fields)
-        return retval
-
-
-class CardActivityPaginatedSchema(PaginatedSchema):
-    data = fields.Nested(
-        CardActivitySchema(),
-        attribute="items",
-        many=True
-    )
-
-
-class CardActivityQuerySchema(PaginatedQuerySchema):
-    type = fields.String(
-        validate=validate.OneOf(["all", "comment"]), missing="comment")
-
-
-class ChecklistItemSchema(SQLAlchemySchema):
-    id = fields.Integer(dump_only=True)
-    checklist_id = fields.Integer(dump_only=True)
-    marked_complete_user_id = fields.Integer(dump_only=True)
-    assigned_user_id = fields.Integer(allow_none=True)
-
-    title = fields.String(required=True)
-    due_date = fields.DateTime(allow_none=True)
-    completed = fields.Boolean(load_default=False, allow_none=False)
-    marked_complete_on = fields.DateTime(dump_only=True)
-    position = fields.Integer()
-
-    marked_complete_user = fields.Nested(
-        UserSchema,
-        only=("username", "name", "avatar_url",),
-        dump_only=True
-    )
-
-    class Meta:
-        model = ChecklistItem
-        unknown = EXCLUDE
-
-
-class CardChecklistSchema(SQLAlchemySchema):
-    id = fields.Integer(dump_only=True)
-    card_id = fields.Integer(dump_only=True)
-
-    title = fields.String(allow_none=True)
-
-    items = fields.Nested(ChecklistItemSchema, many=True, dump_only=True)
-
-    class Meta:
-        model = CardChecklist
-        unknown = EXCLUDE
-
-
-class CardSchema(SQLAlchemySchema):
-    id = fields.Integer(dump_only=True)
-    list_id = fields.Integer()
-    owner_id = fields.Integer(dump_only=True)
-
-    title = fields.String(required=True)
-    description = fields.String()
-    due_date = fields.DateTime(required=False)
-    position = fields.Integer()
-    checklists = fields.Nested(CardChecklistSchema, many=True)
-
-    class Meta:
-        model = Card
-        unknown = EXCLUDE
-
-
 class BoardListSchema(SQLAlchemySchema):
 
     id = fields.Integer(dump_only=True)
@@ -280,7 +131,7 @@ class BoardListSchema(SQLAlchemySchema):
     position = fields.Integer()
 
     cards = fields.Nested(
-        CardSchema,
+        lambda: CardSchema,
         many=True,
         only=("id", "title", "position", "list_id",),
         dump_only=True
@@ -337,3 +188,114 @@ class BoardAllowedUserSchema(SQLAlchemySchema):
 
     class Meta:
         model = BoardAllowedUser
+
+
+class CardMemberSchema(SQLAlchemySchema):
+    id = fields.Integer(dump_only=True)
+    board_user_id = fields.Integer(dump_only=True)
+    send_notification = fields.Boolean(required=True)
+
+    board_user = fields.Nested(
+        BoardAllowedUserSchema(only=("user",)),
+        dump_only=True
+    )
+
+
+class CardCommentSchema(SQLAlchemySchema):
+    id = fields.Integer(dump_only=True)
+    user_id = fields.Integer(dump_only=True)
+    # activity_id = fields.Integer(dump_only=True, required=True)
+    comment = fields.String(required=True)
+
+    created = fields.DateTime(dump_only=True)
+    updated = fields.DateTime(dump_only=True)
+
+    class Meta:
+        model = CardComment
+
+
+class CardActivitySchema(SQLAlchemySchema):
+    id = fields.Integer(dump_only=True)
+    card_id = fields.Integer()
+    board_user_id = fields.Integer()
+    activity_on = fields.DateTime("%Y-%m-%d %H:%M:%S")
+    entity_id = fields.Integer()
+    event = fields.Integer(dump_only=True)
+
+    changes = fields.String(dump_only=True)
+
+    comment = fields.Nested(CardCommentSchema, dump_only=True)
+    member = fields.Nested(CardMemberSchema, dump_only=True)
+
+    board_user = fields.Nested(
+        BoardAllowedUserSchema(only=("user",)),
+        dump_only=True
+    )
+
+
+class CardActivityPaginatedSchema(PaginatedSchema):
+    data = fields.Nested(
+        CardActivitySchema(),
+        attribute="items",
+        many=True
+    )
+
+
+class CardActivityQuerySchema(PaginatedQuerySchema):
+    type = fields.String(
+        validate=validate.OneOf(["all", "comment"]), missing="comment")
+
+
+class ChecklistItemSchema(SQLAlchemySchema):
+    id = fields.Integer(dump_only=True)
+    checklist_id = fields.Integer(dump_only=True)
+    marked_complete_board_user_id = fields.Integer(dump_only=True)
+    assigned_board_user_id = fields.Integer(allow_none=True)
+
+    title = fields.String(required=True)
+    due_date = fields.DateTime(allow_none=True)
+    completed = fields.Boolean(load_default=False, allow_none=False)
+    marked_complete_on = fields.DateTime(dump_only=True)
+    position = fields.Integer()
+
+    marked_complete_user = fields.Nested(
+        BoardAllowedUserSchema(only=("user",)),
+        dump_only=True
+    )
+    assigned_user = fields.Nested(
+        BoardAllowedUserSchema(only=("user",)),
+        dump_only=True
+    )
+
+    class Meta:
+        model = ChecklistItem
+        unknown = EXCLUDE
+
+
+class CardChecklistSchema(SQLAlchemySchema):
+    id = fields.Integer(dump_only=True)
+    card_id = fields.Integer(dump_only=True)
+
+    title = fields.String(allow_none=True)
+
+    items = fields.Nested(ChecklistItemSchema, many=True, dump_only=True)
+
+    class Meta:
+        model = CardChecklist
+        unknown = EXCLUDE
+
+
+class CardSchema(SQLAlchemySchema):
+    id = fields.Integer(dump_only=True)
+    list_id = fields.Integer()
+    owner_id = fields.Integer(dump_only=True)
+
+    title = fields.String(required=True)
+    description = fields.String()
+    due_date = fields.DateTime(required=False)
+    position = fields.Integer()
+    checklists = fields.Nested(CardChecklistSchema, many=True)
+
+    class Meta:
+        model = Card
+        unknown = EXCLUDE

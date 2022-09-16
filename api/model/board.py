@@ -43,6 +43,7 @@ class BoardRole(db.Model, BaseMixin):
 
 class BoardAllowedUser(db.Model, BaseMixin):
     __tablename__ = "board_allowed_user"
+    # ! NOTE: Do not use db.session.delete here we doing soft delete first!
 
     id = sqla.Column(sqla.Integer, primary_key=True)
     user_id = sqla.Column(
@@ -53,10 +54,21 @@ class BoardAllowedUser(db.Model, BaseMixin):
         sqla.Integer, sqla.ForeignKey("board_role.id")
     )
     is_owner = sqla.Column(sqla.Boolean, default=False, nullable=False)
+    is_deleted = sqla.Column(sqla.Boolean, default=False,
+                             nullable=False, server_default="0")
 
     board = sqla_orm.relationship("Board", back_populates="board_users")
     role = sqla_orm.relationship("BoardRole", uselist=False)
     user = sqla_orm.relationship("User", uselist=False)
+
+    @classmethod
+    def get_by_user_id(cls, board_id: int, user_id: int):
+        return cls.query.filter(
+            sqla.and_(
+                cls.board_id == board_id,
+                cls.user_id == user_id
+            )
+        ).first()
 
     def has_permission(self, permission: BoardPermission):
         m = BoardRolePermission.query.filter(
@@ -69,6 +81,10 @@ class BoardAllowedUser(db.Model, BaseMixin):
 
     assigned_cards = sqla_orm.relationship(
         "CardMember", back_populates="board_user",
+        cascade="all, delete-orphan"
+    )
+    activities = sqla_orm.relationship(
+        "CardActivity", back_populates="board_user",
         cascade="all, delete-orphan"
     )
 
