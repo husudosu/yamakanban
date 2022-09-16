@@ -6,6 +6,7 @@ import sqlalchemy as sqla
 
 from api.app import db
 from api.model import BoardPermission, CardActivityEvent
+from api.model.board import BoardAllowedUser
 
 from api.model.user import User
 from api.model.list import BoardList
@@ -232,3 +233,15 @@ def get_card_activities(current_user: User, card: Card, args: dict = {}):
         query = query.order_by(sqla.desc(getattr(CardActivity, sortby)))
 
     return query.paginate(args["page"], args["per_page"])
+
+
+def assign_card_member(
+    current_user: User, card: Card, board_member: BoardAllowedUser
+):
+    if (
+        card.board.has_permission(
+            current_user.id, BoardPermission.CARD_ASSIGN_MEMBER)
+    ):
+        pass
+
+    raise Forbidden()

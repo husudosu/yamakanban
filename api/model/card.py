@@ -69,11 +69,12 @@ class CardMember(db.Model, BaseMixin):
 
     activity_id = sqla.Column(
         sqla.ForeignKey("card_activity.id"), nullable=False)
-    user_id = sqla.Column(sqla.ForeignKey("user.id"), nullable=False)
+    board_user_id = sqla.Column(sqla.ForeignKey(
+        "board_allowed_user.id"), nullable=False)
 
     send_notification = sqla.Column(sqla.Boolean, default=True, nullable=False)
 
-    user = sqla_orm.relationship("User")
+    board_user = sqla_orm.relationship("BoardAllowedUser")
 
 
 class CardComment(db.Model, BaseMixin):

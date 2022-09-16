@@ -35,6 +35,8 @@ class BoardPermission(enum.Enum):
     CARD_EDIT = "card.edit"
     CARD_COMMENT = "card.comment"
     CARD_DELETE = "card.delete"
+    CARD_ASSIGN_MEMBER = "card.assign_member"
+    CARD_DEASSIGN_MEMBER = "card.deassign_member"
     LIST_CREATE = "list.create"
     LIST_EDIT = "list.edit"
     LIST_DELETE = "list.delete"

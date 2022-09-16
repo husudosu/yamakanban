@@ -127,14 +127,10 @@ class UserSchema(SQLAlchemySchema):
 
 class CardMemberSchema(SQLAlchemySchema):
     id = fields.Integer(dump_only=True)
-    # activity_id = fields.Integer(dump_only=True)
-    user_id = fields.Integer(dump_only=True)
+    board_user_id = fields.Integer(dump_only=True)
     send_notification = fields.Boolean(required=True)
 
-    user = fields.Nested(
-        UserSchema(only=("name", "email", "avatar_url", "username",)),
-        dump_only=True
-    )
+    board_user = fields.Nested("BoardAllowedUserSchema", dump_only=True)
 
 
 class CardCommentSchema(SQLAlchemySchema):

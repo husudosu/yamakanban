@@ -67,6 +67,11 @@ class BoardAllowedUser(db.Model, BaseMixin):
         ).first()
         return m.allow if m else False
 
+    assigned_cards = sqla_orm.relationship(
+        "CardMember", back_populates="board_user",
+        cascade="all, delete-orphan"
+    )
+
 
 class Board(db.Model, BaseMixin):
     __tablename__ = "board"
