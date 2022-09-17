@@ -2,6 +2,7 @@ from flask import Blueprint, jsonify, request, abort
 from flask_jwt_extended import jwt_required, current_user
 from webargs.flaskparser import use_args
 from werkzeug.exceptions import Forbidden
+from marshmallow.exceptions import ValidationError
 
 from api.app import db
 from api.model.board import BoardAllowedUser
@@ -11,7 +12,7 @@ from api.model.list import BoardList
 from api.service import card as card_service
 from api.util.schemas import (
     CardActivityPaginatedSchema, CardActivityQuerySchema,
-    CardActivitySchema, CardSchema, CardCommentSchema,
+    CardActivitySchema, CardMemberSchema, CardSchema, CardCommentSchema,
 )
 
 card_bp = Blueprint("card_bp", __name__)
@@ -20,6 +21,7 @@ card_schema = CardSchema()
 card_comment_schema = CardCommentSchema()
 card_activity_schema = CardActivitySchema()
 card_activity_paginated_schema = CardActivityPaginatedSchema()
+card_member_schema = CardMemberSchema()
 activity_schema_query = CardActivityQuerySchema()
 
 
@@ -181,11 +183,30 @@ def get_card_activities(args, card_id: int):
 @card_bp.route("/card/<card_id>/member", methods=["POST"])
 @jwt_required()
 def assign_member(card_id: int):
-    raise NotImplemented()
     card: Card = Card.get_or_404(card_id)
-    member = card_service.assign_card_member(
-        current_user,
-        card,
-        BoardAllowedUser.get_by_user_id(
-            card.board_id, request.json["user_id"]) or abort(404, "User not member of board.")
+    current_member = BoardAllowedUser.get_by_user_id(
+        card.board_id, current_user.id)
+
+    if not current_member:
+        raise Forbidden()
+
+    assignment = card_service.assign_card_member(
+        current_member, card, card_member_schema.load(request.json))
+    db.session.commit()
+    return card_member_schema.dump(assignment)
+
+
+@card_bp.route("/card/<card_id>/member", methods=["DELETE"])
+@jwt_required()
+def deassign_member(card_id: int):
+    card: Card = Card.get_or_404(card_id)
+    current_member = BoardAllowedUser.get_by_user_id(
+        card.board_id, current_user.id)
+
+    if not current_member:
+        raise Forbidden()
+    card_service.deassign_card_member(
+        current_member, card, card_member_schema.load(request.json)
     )
+    db.session.commit()
+    return {}

@@ -192,8 +192,8 @@ class BoardAllowedUserSchema(SQLAlchemySchema):
 
 class CardMemberSchema(SQLAlchemySchema):
     id = fields.Integer(dump_only=True)
-    board_user_id = fields.Integer(dump_only=True)
-    send_notification = fields.Boolean(required=True)
+    board_user_id = fields.Integer(required=True)
+    send_notification = fields.Boolean(missing=True)
 
     board_user = fields.Nested(
         BoardAllowedUserSchema(only=("user",)),
@@ -291,10 +291,14 @@ class CardSchema(SQLAlchemySchema):
     owner_id = fields.Integer(dump_only=True)
 
     title = fields.String(required=True)
-    description = fields.String()
-    due_date = fields.DateTime(required=False)
+    description = fields.String(allow_none=True)
+    due_date = fields.DateTime(required=False, allow_none=True)
     position = fields.Integer()
-    checklists = fields.Nested(CardChecklistSchema, many=True)
+
+    checklists = fields.Nested(CardChecklistSchema, many=True, dump_only=True)
+    assigned_members = fields.Nested(
+        CardMemberSchema, many=True, dump_only=True
+    )
 
     class Meta:
         model = Card

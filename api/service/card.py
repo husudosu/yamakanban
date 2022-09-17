@@ -154,7 +154,9 @@ def patch_card_comment(
     raise Forbidden()
 
 
-def delete_card_comment(current_member: BoardAllowedUser, comment: CardComment):
+def delete_card_comment(
+    current_member: BoardAllowedUser, comment: CardComment
+):
     if (current_member.id == comment.board_user_id):
         comment.delete()
     else:
@@ -199,40 +201,73 @@ def get_card_activities(card: Card, args: dict = {}):
     return query.paginate(args["page"], args["per_page"])
 
 
-# def assign_card_member(
-#     current_user: User, card: Card, board_member: BoardAllowedUser
-# ):
-#     if (
-#         card.board.has_permission(
-#             current_user.id, BoardPermission.CARD_ASSIGN_MEMBER)
-#     ):
-#         member = CardMember(
-#             board_user_Id=board_member.id
-#         )
-#         card.assigned_members.append(member)
+def assign_card_member(
+    current_member: BoardAllowedUser, card: Card,
+    data: dict
+) -> CardMember:
+    if current_member.has_permission(BoardPermission.CARD_ASSIGN_MEMBER):
+        # Get member
+        member = BoardAllowedUser.query.filter(
+            BoardAllowedUser.id == data["board_user_id"]
+        ).first()
 
-#         # Create card acitivity
-#         card.activities.append(
-#             CardActivity(
-#                 user_id=current_user.id,
-#                 event=CardActivityEvent.CARD_ASSIGN_MEMBER,
-#                 entitity_id=member.id
-#             )
-#         )
-#         return member
+        if not member:
+            raise ValidationError(
+                {"board_user_id": ["Board user not exists."]})
 
-#     raise Forbidden()
+        # Check if member already assigned
+        if CardMember.query.filter(
+            CardMember.board_user_id == member.id
+        ).first():
+            raise ValidationError(
+                {"board_user_id": ["Member already assigned to this card."]})
+
+        member_assignment = CardMember(board_user_id=member.id)
+        card.assigned_members.append(member_assignment)
+        # TODO: Implement send notification
+
+        # Add card activity
+        card.activities.append(
+            CardActivity(
+                board_user_id=current_member.id,
+                event=CardActivityEvent.CARD_ASSIGN_MEMBER,
+                entity_id=member.id,
+                changes=json.dumps(
+                    {"to": {"board_user_id": member_assignment.board_user_id}}
+                )
+            )
+        )
+        return member
+    raise Forbidden()
 
 
-# def deassign_card_member(
-#     current_user: User, card: Card, board_member: BoardAllowedUser
-# ):
-#     raise NotImplemented()
-#     if (
-#         card.board.has_permission(
-#             current_user.id, BoardPermission.CARD_DEASSIGN_MEMBER
-#         )
-#     ):
-#         pass
-#     else:
-#         raise Forbidden()
+def deassign_card_member(
+    current_member: BoardAllowedUser, card: Card,
+    data: dict
+):
+    if current_member.has_permission(BoardPermission.CARD_DEASSIGN_MEMBER):
+        # Get member
+        card_member: CardMember = CardMember.query.filter(
+            sqla.and_(
+                CardMember.card_id == card.id,
+                CardMember.board_user_id == data["board_user_id"]
+            )
+        ).first()
+
+        if not card_member:
+            raise ValidationError(
+                {"board_user_id": ["Board user not assigned to this card."]}
+            )
+        # Add activity to card
+        card.activities.append(
+            CardActivity(
+                board_user_id=current_member.id,
+                event=CardActivityEvent.CARD_DEASSIGN_MEMBER,
+                changes=json.dumps(
+                    {"from": {"board_user_id": card_member.board_user_id}}
+                )
+            )
+        )
+        db.session.delete(card_member)
+    else:
+        raise Forbidden()

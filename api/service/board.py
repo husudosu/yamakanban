@@ -226,6 +226,7 @@ def update_member_role(
 
 
 def remove_member(current_user: User, board: Board, user: User):
+    # TODO: convert this to board_member
     board_user = board.get_board_user(current_user.id)
     # You can't remove yourself
     if not board_user or not board_user.role.is_admin:
