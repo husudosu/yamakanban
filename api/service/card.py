@@ -217,7 +217,10 @@ def assign_card_member(
 
         # Check if member already assigned
         if CardMember.query.filter(
-            CardMember.board_user_id == member.id
+            sqla.and_(
+                CardMember.card_id == card.id,
+                CardMember.board_user_id == member.id
+            )
         ).first():
             raise ValidationError(
                 {"board_user_id": ["Member already assigned to this card."]})

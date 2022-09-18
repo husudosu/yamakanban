@@ -106,7 +106,6 @@ def create_app() -> Flask:
             usr = user.User.create(
                 username="admin",
                 password="admin",
-                avatar_url="https://i.pravatar.cc/300",
                 email="admin@localhost.com",
                 timezone=app.config["DEFAULT_TIMEZONE"],
                 roles=[admin_role]

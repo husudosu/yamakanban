@@ -133,7 +133,7 @@ class BoardListSchema(SQLAlchemySchema):
     cards = fields.Nested(
         lambda: CardSchema,
         many=True,
-        only=("id", "title", "position", "list_id",),
+        only=("id", "title", "position", "list_id", "assigned_members"),
         dump_only=True
     )
 
@@ -196,7 +196,7 @@ class CardMemberSchema(SQLAlchemySchema):
     send_notification = fields.Boolean(missing=True)
 
     board_user = fields.Nested(
-        BoardAllowedUserSchema(only=("user",)),
+        BoardAllowedUserSchema(only=("user", "id",)),
         dump_only=True
     )
 
@@ -228,7 +228,7 @@ class CardActivitySchema(SQLAlchemySchema):
     member = fields.Nested(CardMemberSchema, dump_only=True)
 
     board_user = fields.Nested(
-        BoardAllowedUserSchema(only=("user",)),
+        BoardAllowedUserSchema(only=("user", "id",)),
         dump_only=True
     )
 
@@ -259,11 +259,11 @@ class ChecklistItemSchema(SQLAlchemySchema):
     position = fields.Integer()
 
     marked_complete_user = fields.Nested(
-        BoardAllowedUserSchema(only=("user",)),
+        BoardAllowedUserSchema(only=("user", "id",)),
         dump_only=True
     )
     assigned_user = fields.Nested(
-        BoardAllowedUserSchema(only=("user",)),
+        BoardAllowedUserSchema(only=("user", "id",)),
         dump_only=True
     )
 
@@ -297,7 +297,7 @@ class CardSchema(SQLAlchemySchema):
 
     checklists = fields.Nested(CardChecklistSchema, many=True, dump_only=True)
     assigned_members = fields.Nested(
-        CardMemberSchema, many=True, dump_only=True
+        CardMemberSchema(only=("board_user",)), many=True, dump_only=True
     )
 
     class Meta:

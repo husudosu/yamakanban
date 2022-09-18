@@ -180,7 +180,7 @@ def get_card_activities(args, card_id: int):
     )
 
 
-@card_bp.route("/card/<card_id>/member", methods=["POST"])
+@card_bp.route("/card/<card_id>/assign-member", methods=["POST"])
 @jwt_required()
 def assign_member(card_id: int):
     card: Card = Card.get_or_404(card_id)
@@ -196,7 +196,7 @@ def assign_member(card_id: int):
     return card_member_schema.dump(assignment)
 
 
-@card_bp.route("/card/<card_id>/member", methods=["DELETE"])
+@card_bp.route("/card/<card_id>/deassign-member", methods=["POST"])
 @jwt_required()
 def deassign_member(card_id: int):
     card: Card = Card.get_or_404(card_id)
