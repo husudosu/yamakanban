@@ -240,7 +240,7 @@ def assign_card_member(
                 )
             )
         )
-        return member
+        return member_assignment
     raise Forbidden()
 
 
