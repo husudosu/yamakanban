@@ -71,6 +71,8 @@ class BoardAllowedUser(db.Model, BaseMixin):
         ).first()
 
     def has_permission(self, permission: BoardPermission):
+        if self.is_deleted:
+            return False
         m = BoardRolePermission.query.filter(
             sqla.and_(
                 BoardRolePermission.board_role_id == self.board_role_id,

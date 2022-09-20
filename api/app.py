@@ -17,6 +17,7 @@ from flask_jwt_extended import (
 )
 from flask_mail import Mail
 from flask_compress import Compress
+from flask_socketio import SocketIO
 
 from marshmallow.exceptions import ValidationError
 
@@ -30,6 +31,7 @@ cors = CORS()
 jwt = JWTManager()
 mail = Mail()
 compress = Compress()
+socketio = SocketIO()
 
 
 def create_app() -> Flask:
@@ -75,6 +77,7 @@ def create_app() -> Flask:
     app.register_blueprint(api_bp)
 
     compress.init_app(app)
+    socketio.init_app(app, cors_allowed_origins="*")
 
     @jwt.user_identity_loader
     def user_identity_lookup(user):
@@ -249,4 +252,11 @@ def create_app() -> Flask:
 
     app.cli.add_command(factory_cli)
 
+    @socketio.on('connect')
+    def test_connect(auth):
+        print("Connect")
+
+    @socketio.on('disconnect')
+    def test_disconnect():
+        print('Client disconnected')
     return app

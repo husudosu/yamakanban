@@ -55,7 +55,8 @@ def delete_board_list(current_member: BoardAllowedUser, board_list: BoardList):
 
 
 def update_cards_position(
-    current_member: BoardAllowedUser, board_list: BoardList, data: typing.List[int]
+    current_member: BoardAllowedUser, board_list: BoardList,
+    data: typing.List[int]
 ):
     if current_member.has_permission(BoardPermission.LIST_EDIT):
         for index, item in enumerate(data):
