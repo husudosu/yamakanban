@@ -4,7 +4,7 @@ from flask_jwt_extended import current_user, jwt_required
 
 from werkzeug.exceptions import Forbidden
 from flask import Blueprint, request, jsonify, abort
-from api.model.board import Board, BoardRole
+from api.model.board import Board, BoardAllowedUser, BoardRole
 from ..model.user import User
 from api.service import board as board_service
 from api.util.schemas import (
@@ -168,10 +168,19 @@ def update_board_member(board_id: int, user_id: int):
 @board_bp.route("/board/<board_id>/member/<user_id>", methods=["DELETE"])
 @jwt_required()
 def delete_board_member(board_id: int, user_id: int):
+    board = Board.get_or_404(board_id)
+    current_member = BoardAllowedUser.get_by_user_id(board.id, current_user.id)
+
+    if not current_member:
+        abort(403)
+    member = BoardAllowedUser.get_by_user_id(board.id, user_id)
+
+    if not member:
+        abort(404)
+
     board_service.remove_member(
-        current_user,
-        Board.get_or_404(board_id),
-        User.get_or_404(user_id)
+        current_member,
+        member
     )
     db.session.commit()
     return {}

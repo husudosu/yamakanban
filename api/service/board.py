@@ -24,7 +24,10 @@ def get_user_boards(current_user: User) -> List[Board]:
     # Have acces to boards
     boards = []
     for entry in BoardAllowedUser.query.filter(
-        BoardAllowedUser.user_id == current_user.id
+        sqla.and_(
+            BoardAllowedUser.user_id == current_user.id,
+            BoardAllowedUser.is_deleted == False
+        )
     ).all():
         boards.append(entry.board)
     return boards
@@ -225,13 +228,17 @@ def update_member_role(
     return member
 
 
-def remove_member(current_user: User, board: Board, user: User):
-    # TODO: convert this to board_member
-    board_user = board.get_board_user(current_user.id)
-    # You can't remove yourself
-    if not board_user or not board_user.role.is_admin:
+def remove_member(
+    current_member: BoardAllowedUser, member: BoardAllowedUser
+):
+    if not current_member.role.is_admin:
         raise Forbidden()
-    if board_user.user_id == user.id:
+
+    if current_member.id == member.id:
         raise ValidationError({"user_id": ["You can't remove yourself."]})
 
-    db.session.delete(board.get_board_user(user.id))
+    if not member.is_deleted:
+        # If the user not soft deleted yet, do a soft delete.
+        member.is_deleted = True
+    else:
+        db.session.delete(member)

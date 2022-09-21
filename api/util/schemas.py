@@ -185,6 +185,7 @@ class BoardAllowedUserSchema(SQLAlchemySchema):
     role = fields.Nested(BoardRoleSchema, dump_only=True)
     user = fields.Nested(UserSchema, only=(
         "username", "name", "avatar_url",), dump_only=True)
+    is_deleted = fields.Boolean(dump_only=True)
 
     class Meta:
         model = BoardAllowedUser

@@ -145,23 +145,10 @@ class Board(db.Model, BaseMixin):
         """
         if self.owner_id == user_id:
             return True
-        return True if self.get_board_user(user_id) else False
-
-    def has_permission(
-        self,
-        user_id: int,
-        permission: BoardPermission
-    ):
-        if self.owner_id == user_id:
-            return True
-
-        m: BoardAllowedUser = BoardAllowedUser.query.filter(
-            sqla.and_(
-                BoardAllowedUser.board_id == self.id,
-                BoardAllowedUser.user_id == user_id
-            )
-        ).first()
-        return False if not m else m.has_permission(permission)
+        member = self.get_board_user(user_id)
+        if not member or member.is_deleted:
+            return False
+        return True
 
     def get_board_user(self, user_id: int) -> BoardAllowedUser:
         """Gets board user.
