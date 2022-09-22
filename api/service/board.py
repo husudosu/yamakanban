@@ -242,3 +242,12 @@ def remove_member(
         member.is_deleted = True
     else:
         db.session.delete(member)
+
+
+def activate_member(
+    current_member: BoardAllowedUser, member: BoardAllowedUser
+):
+    if not current_member.role.is_admin:
+        raise Forbidden()
+
+    member.is_deleted = False

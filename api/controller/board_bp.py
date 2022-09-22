@@ -184,3 +184,18 @@ def delete_board_member(board_id: int, user_id: int):
     )
     db.session.commit()
     return {}
+
+
+@board_bp.route("/board/member/<member_id>/activate", methods=["POST"])
+@jwt_required()
+def activate_member(member_id: int):
+    member_to_activate = BoardAllowedUser.get_or_404(member_id)
+    member = BoardAllowedUser.get_by_user_id(
+        member_to_activate.board_id, current_user.id)
+
+    if not member:
+        raise Forbidden()
+
+    board_service.activate_member(member, member_to_activate)
+    db.session.commit()
+    return {}

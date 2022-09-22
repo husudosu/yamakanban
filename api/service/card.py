@@ -54,7 +54,6 @@ def post_card(current_member: BoardAllowedUser, board_list: BoardList, data: dic
         data.pop("list_id", None)
         card = Card(
             **data,
-            owner_id=current_member.id,
             board_id=board_list.board_id,
             list_id=board_list.id,
         )

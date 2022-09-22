@@ -83,8 +83,6 @@ class Card(db.Model, BaseMixin):
     id = sqla.Column(sqla.Integer, primary_key=True)
     list_id = sqla.Column(
         sqla.Integer, sqla.ForeignKey("list.id"), nullable=False)
-    owner_id = sqla.Column(
-        sqla.Integer, sqla.ForeignKey("board_allowed_user.id"), nullable=False)
     board_id = sqla.Column(
         sqla.Integer, sqla.ForeignKey("board.id"), nullable=False
     )
