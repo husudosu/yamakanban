@@ -22,6 +22,7 @@ from flask_socketio import SocketIO
 from marshmallow.exceptions import ValidationError
 
 from werkzeug.middleware.profiler import ProfilerMiddleware
+from api.socket import BoardNamespace
 
 from config import Config
 
@@ -77,7 +78,8 @@ def create_app() -> Flask:
     app.register_blueprint(api_bp)
 
     compress.init_app(app)
-    socketio.init_app(app, cors_allowed_origins="*")
+    socketio.init_app(app, cors_allowed_origins="*",
+                      logger=True, engineio_logger=False)
 
     @jwt.user_identity_loader
     def user_identity_lookup(user):
@@ -252,11 +254,5 @@ def create_app() -> Flask:
 
     app.cli.add_command(factory_cli)
 
-    @socketio.on('connect')
-    def test_connect(auth):
-        print("Connect")
-
-    @socketio.on('disconnect')
-    def test_disconnect():
-        print('Client disconnected')
+    socketio.on_namespace(BoardNamespace('/'))
     return app
