@@ -22,7 +22,6 @@ from flask_socketio import SocketIO
 from marshmallow.exceptions import ValidationError
 
 from werkzeug.middleware.profiler import ProfilerMiddleware
-from api.socket import BoardNamespace
 
 from config import Config
 
@@ -253,6 +252,9 @@ def create_app() -> Flask:
         check_permission_integrity()
 
     app.cli.add_command(factory_cli)
+
+    # Register Socket.IO namespaces
+    from api.socket import BoardNamespace
 
     socketio.on_namespace(BoardNamespace('/'))
     return app
