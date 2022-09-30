@@ -133,7 +133,7 @@ def patch_checklist_items_order(checklist_id: int):
         raise Forbidden()
 
     checklist_service.update_items_position(
-        current_user,
+        current_member,
         CardChecklist.get_or_404(checklist_id),
         request.json
     )
