@@ -290,7 +290,6 @@ def logout():
 
 
 @user_bp.route("/find-user", methods=["POST"])
-@jwt_required()
 def find_user():
     usr = User.find_user(request.json["username"])
     return guest_user_schema.dump(usr) if usr else abort(404)

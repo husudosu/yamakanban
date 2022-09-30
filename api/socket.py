@@ -1,4 +1,4 @@
-from flask_socketio import Namespace, emit, join_room
+from flask_socketio import Namespace, emit, join_room, leave_room, rooms
 from flask_jwt_extended import jwt_required, current_user
 from werkzeug.exceptions import Forbidden
 
@@ -11,7 +11,7 @@ class BoardNamespace(Namespace):
     def on_connect(self):
         print("Client connected")
         print("Current user: ")
-        print(current_user.name)
+        print(f"{current_user.name} {current_user.username} ")
 
     def on_disconnect(self):
         pass
@@ -27,4 +27,5 @@ class BoardNamespace(Namespace):
         if not member:
             raise Forbidden()
         print(f"Subscribing to new board events: {data}")
+        print(rooms())
         join_room(f"board-{data['board_id']}")
