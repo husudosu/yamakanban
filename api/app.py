@@ -13,7 +13,7 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 from flask_jwt_extended import (
     JWTManager, get_jwt, create_access_token,
-    get_jwt_identity, set_access_cookies
+    get_jwt_identity, set_access_cookies,
 )
 from flask_mail import Mail
 from flask_compress import Compress
@@ -121,6 +121,11 @@ def create_app() -> Flask:
     @app.after_request
     def refresh_expiring_jwts(response):
         try:
+            """
+            FIXME: Very hacky way to handle logout. 
+            """
+            if "Token revoked" in str(response.get_data()):
+                return response
             exp_timestamp = get_jwt()["exp"]
             now = datetime.now(timezone.utc)
             target_timestamp = datetime.timestamp(now + timedelta(minutes=30))

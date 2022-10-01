@@ -52,7 +52,6 @@ def post_list_card(list_id: int):
     board_list: BoardList = BoardList.get_or_404(list_id)
     current_member = BoardAllowedUser.get_by_user_id(
         board_list.board_id, current_user.id)
-    print("Current member not found")
     if not current_member:
         raise Forbidden()
 

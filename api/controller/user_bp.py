@@ -7,7 +7,8 @@ from flask_jwt_extended import (
     create_access_token, jwt_required,
     get_jwt, current_user, verify_jwt_in_request,
     create_refresh_token, decode_token,
-    set_access_cookies, set_refresh_cookies
+    set_access_cookies, set_refresh_cookies,
+    unset_jwt_cookies
 )
 import werkzeug.exceptions as we
 
@@ -286,7 +287,10 @@ def logout():
         )
     )
     db.session.commit()
-    return jsonify(message="Token revoked")
+
+    response = jsonify({"message": "Token revoked"})
+    unset_jwt_cookies(response)
+    return response
 
 
 @user_bp.route("/find-user", methods=["POST"])
