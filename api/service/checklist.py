@@ -149,7 +149,7 @@ def checklist_item_process_changes(
             item.marked_complete_board_user_id = current_member.id
             item.marked_complete_on = datetime.utcnow()
         else:
-            item.marked_complete_user_id = None
+            item.marked_complete_board_user_id = None
             item.marked_complete_on = None
     # TODO: Add all checklist item events here!
 
@@ -164,17 +164,17 @@ def patch_checklist_item(
         # User can update everything
 
         # SQL validation
-        if data.get("marked_complete_user_id"):
-            if not item.board.get_board_user(data["marked_complete_user_id"]):
-                errors["marked_complete_user_id"] = [
+        if data.get("marked_complete_board_user_id"):
+            if not item.board.get_board_user(data["marked_complete_board_user_id"]):
+                errors["marked_complete_board_user_id"] = [
                     "User not exists or not member of board!"]
 
-        if data.get("assigned_user_id"):
+        if data.get("assigned_board_user_id"):
             assigned_user = item.board.get_board_user(
-                data["assigned_user_id"])
+                data["assigned_board_user_id"])
 
             if not assigned_user:
-                errors["assigned_user_id"] = [
+                errors["assigned_board_user_id"] = [
                     "User not exists or not member of board!"]
 
         if len(errors.keys()) > 0:
