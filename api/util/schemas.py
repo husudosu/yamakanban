@@ -8,7 +8,7 @@ from marshmallow_sqlalchemy import SQLAlchemySchema
 from api.model.board import (
     Board, BoardAllowedUser, BoardRole, BoardRolePermission
 )
-from api.model.card import Card, CardComment
+from api.model.card import Card, CardComment, CardDate
 from api.model.checklist import ChecklistItem, CardChecklist
 from api.model.list import BoardList
 from ..model import user
@@ -286,6 +286,23 @@ class CardChecklistSchema(SQLAlchemySchema):
         unknown = EXCLUDE
 
 
+class CardDateSchema(SQLAlchemySchema):
+
+    id = fields.Integer(dump_only=True)
+    card_id = fields.Integer(dump_only=True)
+    board_id = fields.Integer(dump_only=True)
+
+    is_due_date = fields.Boolean(missing=False)
+    dt_from = fields.DateTime(required=True)
+    dt_to = fields.DateTime(allow_none=True)
+
+    description = fields.String(allow_none=True)
+
+    class Meta:
+        model = CardDate
+        unknown = EXCLUDE
+
+
 class CardSchema(SQLAlchemySchema):
     id = fields.Integer(dump_only=True)
     list_id = fields.Integer()
@@ -299,6 +316,7 @@ class CardSchema(SQLAlchemySchema):
     assigned_members = fields.Nested(
         CardMemberSchema(only=("board_user",)), many=True, dump_only=True
     )
+    dates = fields.Nested(CardDateSchema, many=True, dump_only=True)
 
     class Meta:
         model = Card

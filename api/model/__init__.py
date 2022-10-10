@@ -37,11 +37,16 @@ class BoardPermission(enum.Enum):
     CARD_DELETE = "card.delete"
     CARD_ASSIGN_MEMBER = "card.assign_member"
     CARD_DEASSIGN_MEMBER = "card.deassign_member"
+    CARD_ADD_DATE = "card.add_date"
+    CARD_EDIT_DATE = "card.edit_date"
+
     LIST_CREATE = "list.create"
     LIST_EDIT = "list.edit"
     LIST_DELETE = "list.delete"
+
     BOARD_UPDATE = "board.update"
     BOARD_DELETE = "board.delete"
+
     CHECKLIST_CREATE = "checklist.create"
     CHECKLIST_EDIT = "checklist.edit"
     CHECKLIST_ITEM_MARK = "checklist_item.mark"
@@ -60,3 +65,5 @@ class CardActivityEvent(RestEnum):
 
     CARD_ASSIGN_MEMBER = 10
     CARD_DEASSIGN_MEMBER = 11
+    CARD_ADD_DATE = 12
+    CARD_EDIT_DATTE = 13

@@ -76,6 +76,23 @@ class CardComment(db.Model, BaseMixin):
         self.updated = datetime.utcnow()
 
 
+class CardDate(db.Model, BaseMixin):
+
+    __tablename__ = "card_date"
+
+    id = sqla.Column(sqla.Integer, primary_key=True)
+    card_id = sqla.Column(sqla.Integer, sqla.ForeignKey("card.id"))
+    board_id = sqla.Column(sqla.Integer, sqla.ForeignKey("board.id"))
+    is_due_date = sqla.Column(sqla.Boolean, default=False)
+
+    dt_from = sqla.Column(sqla.DateTime, nullable=False)
+    dt_to = sqla.Column(sqla.DateTime)
+
+    description = sqla.Column(sqla.Text)
+
+    board = sqla_orm.relationship("Board")
+
+
 class Card(db.Model, BaseMixin):
 
     __tablename__ = "card"
@@ -105,6 +122,10 @@ class Card(db.Model, BaseMixin):
     )
     assigned_members = sqla_orm.relationship(
         "CardMember", cascade="all, delete-orphan"
+    )
+    dates = sqla_orm.relationship(
+        "CardDate", cascade="all, delete-orphan",
+        order_by="asc(CardDate.dt_from)"
     )
 
     board = sqla_orm.relationship("Board")

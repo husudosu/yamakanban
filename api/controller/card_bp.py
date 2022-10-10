@@ -12,7 +12,7 @@ from api.model.list import BoardList
 from api.service import card as card_service
 from api.util.schemas import (
     CardActivityPaginatedSchema, CardActivityQuerySchema,
-    CardActivitySchema, CardMemberSchema, CardSchema, CardCommentSchema,
+    CardActivitySchema, CardDateSchema, CardMemberSchema, CardSchema, CardCommentSchema,
 )
 
 card_bp = Blueprint("card_bp", __name__)
@@ -22,6 +22,8 @@ card_comment_schema = CardCommentSchema()
 card_activity_schema = CardActivitySchema()
 card_activity_paginated_schema = CardActivityPaginatedSchema()
 card_member_schema = CardMemberSchema()
+card_date_schema = CardDateSchema()
+
 activity_schema_query = CardActivityQuerySchema()
 
 
@@ -209,3 +211,21 @@ def deassign_member(card_id: int):
     )
     db.session.commit()
     return {}
+
+
+@card_bp.route("/card/<card_id>/date", methods=["POST"])
+@jwt_required()
+def post_card_date(card_id: int):
+    card: Card = Card.get_or_404(card_id)
+    current_member = BoardAllowedUser.get_by_user_id(
+        card.board_id, current_user.id)
+
+    if not current_member:
+        raise Forbidden()
+    card_date = card_service.post_card_date(
+        current_member,
+        card,
+        card_date_schema.load(request.json)
+    )
+    db.session.commit()
+    return card_date_schema.dump(card_date)

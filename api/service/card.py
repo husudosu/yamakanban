@@ -10,7 +10,7 @@ from api.model.board import BoardAllowedUser
 
 from api.model.list import BoardList
 from api.model.card import (
-    Card, CardActivity, CardComment, CardMember
+    Card, CardActivity, CardComment, CardDate, CardMember
 )
 
 
@@ -273,3 +273,34 @@ def deassign_card_member(
         db.session.delete(card_member)
     else:
         raise Forbidden()
+
+
+def post_card_date(
+    current_member: BoardAllowedUser, card: Card,
+    data: dict
+) -> CardDate:
+    if current_member.has_permission(BoardPermission.CARD_ADD_DATE):
+        card_date = CardDate(board_id=card.board_id, **data)
+        card.dates.append(card_date)
+        # TODO (check list bewow):
+        # - Allow only one due date for card!
+        # - Validate dt_from and dt_to
+        # - Improve changes json (maybe dump the whole model into changes)
+
+        card.activities.append(
+            CardActivity(
+                board_user_id=current_member.id,
+                event=CardActivityEvent.CARD_ADD_DATE,
+                entity_id=card_date.id,
+                changes=json.dumps(
+                    {
+                        "dt_from": str(card_date.dt_from),
+                        "dt_to": str(card_date.dt_to),
+                        "description": card_date.description,
+                        "is_due_date": card_date.is_due_date,
+                    }
+                )
+            )
+        )
+        return card_date
+    raise Forbidden()
