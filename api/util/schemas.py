@@ -298,6 +298,19 @@ class CardDateSchema(SQLAlchemySchema):
 
     description = fields.String(allow_none=True)
 
+    @validates_schema
+    def validate_schema(self, data, **kwargs):
+        errors = {}
+        dt_from = data.get("dt_from", getattr(self.instance, "dt_from", None))
+        dt_to = data.get("dt_to", getattr(self.instance, "dt_to", None))
+
+        if dt_to and dt_from > dt_to:
+            errors["dt_to"] = ["Can't be less than dt_from!"]
+            errors["dt_from"] = ["Can't be greater than dt_to!"]
+
+        if len(errors.keys()) > 0:
+            raise ValidationError(errors)
+
     class Meta:
         model = CardDate
         unknown = EXCLUDE

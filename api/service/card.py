@@ -280,13 +280,18 @@ def post_card_date(
     data: dict
 ) -> CardDate:
     if current_member.has_permission(BoardPermission.CARD_ADD_DATE):
+
+        if data.get("is_due_date", False) is True:
+            # Check if the card has other due date.
+            # We only allow one due date.
+            has_due_date = list(filter(lambda dt: dt.is_due_date, card.dates))
+            if len(has_due_date) > 0:
+                raise ValidationError({
+                    "is_due_date": ["Card already has a due date!"]
+                })
+
         card_date = CardDate(board_id=card.board_id, **data)
         card.dates.append(card_date)
-        # TODO (check list bewow):
-        # - Allow only one due date for card!
-        # - Validate dt_from and dt_to
-        # - Improve changes json (maybe dump the whole model into changes)
-
         card.activities.append(
             CardActivity(
                 board_user_id=current_member.id,
@@ -294,13 +299,59 @@ def post_card_date(
                 entity_id=card_date.id,
                 changes=json.dumps(
                     {
-                        "dt_from": str(card_date.dt_from),
-                        "dt_to": str(card_date.dt_to),
-                        "description": card_date.description,
-                        "is_due_date": card_date.is_due_date,
+                        "dt_from": card_date.dt_from.strftime("%Y-%m-%d %H:%M:%S"),
+                        "dt_to": card_date.dt_to.strftime("%Y-%m-%d %H:%M:%S") if card_date.dt_to else None,
+                        "description": card_date.description
                     }
                 )
             )
         )
         return card_date
     raise Forbidden()
+
+
+def patch_card_date(
+    current_member: BoardAllowedUser, card_date: CardDate,
+    data: dict
+) -> CardDate:
+    if current_member.has_permission(BoardPermission.CARD_EDIT_DATE):
+        if data.get("is_due_date", False) is True:
+            # Check if the card has other due date.
+            # We only allow one due date.
+            has_due_date = list(
+                filter(lambda dt: dt.is_due_date and dt.id != card_date.id, card_date.card.dates))
+            if len(has_due_date) > 0:
+                raise ValidationError({
+                    "is_due_date": ["Card already has a due date!"]
+                })
+        card_date.update(**data)
+        card_date.card.activities.append(
+            CardActivity(
+                board_user_id=current_member.id,
+                event=CardActivityEvent.CARD_EDIT_DATE,
+                entity_id=card_date.id,
+                changes=json.dumps(
+                    {
+                        "dt_from": card_date.dt_from.strftime("%Y-%m-%d %H:%M:%S"),
+                        "dt_to": card_date.dt_to.strftime("%Y-%m-%d %H:%M:%S") if card_date.dt_to else None,
+                        "description": card_date.description
+                    }
+                )
+            )
+        )
+        return card_date
+    raise Forbidden()
+
+
+def delete_card_date(current_member: BoardAllowedUser, card_date: CardDate):
+    if current_member.has_permission(BoardPermission.CARD_EDIT_DATE):
+        card_date.card.activities.append(
+            CardActivity(
+                board_user_id=current_member.id,
+                event=CardActivityEvent.CARD_DELETE_DATE,
+                entity_id=card_date.id,
+            )
+        )
+        db.session.delete(card_date)
+    else:
+        raise Forbidden()

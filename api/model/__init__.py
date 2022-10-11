@@ -66,4 +66,5 @@ class CardActivityEvent(RestEnum):
     CARD_ASSIGN_MEMBER = 10
     CARD_DEASSIGN_MEMBER = 11
     CARD_ADD_DATE = 12
-    CARD_EDIT_DATTE = 13
+    CARD_EDIT_DATE = 13
+    CARD_DELETE_DATE = 14

@@ -91,6 +91,7 @@ class CardDate(db.Model, BaseMixin):
     description = sqla.Column(sqla.Text)
 
     board = sqla_orm.relationship("Board")
+    card = sqla_orm.relationship("Card", back_populates="dates", uselist=False)
 
 
 class Card(db.Model, BaseMixin):
@@ -125,7 +126,8 @@ class Card(db.Model, BaseMixin):
     )
     dates = sqla_orm.relationship(
         "CardDate", cascade="all, delete-orphan",
-        order_by="asc(CardDate.dt_from)"
+        order_by="asc(CardDate.dt_from)",
+        back_populates="card"
     )
 
     board = sqla_orm.relationship("Board")

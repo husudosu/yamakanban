@@ -6,7 +6,7 @@ from marshmallow.exceptions import ValidationError
 
 from api.app import db
 from api.model.board import BoardAllowedUser
-from api.model.card import Card, CardComment
+from api.model.card import Card, CardComment, CardDate
 from api.model.list import BoardList
 
 from api.service import card as card_service
@@ -23,7 +23,6 @@ card_activity_schema = CardActivitySchema()
 card_activity_paginated_schema = CardActivityPaginatedSchema()
 card_member_schema = CardMemberSchema()
 card_date_schema = CardDateSchema()
-
 activity_schema_query = CardActivityQuerySchema()
 
 
@@ -229,3 +228,43 @@ def post_card_date(card_id: int):
     )
     db.session.commit()
     return card_date_schema.dump(card_date)
+
+
+@card_bp.route("/date/<date_id>", methods=["PATCH"])
+@jwt_required()
+def patch_card_date(date_id: int):
+    card_date: CardDate = CardDate.get_or_404(date_id)
+    current_member = BoardAllowedUser.get_by_user_id(
+        card_date.board_id, current_user.id
+    )
+
+    if not current_member:
+        raise Forbidden()
+    card_date = card_service.patch_card_date(
+        current_member,
+        card_date,
+        card_date_schema.load(
+            request.json,
+            partial=True,
+            instance=card_date,
+            session=db.session
+        )
+    )
+    db.session.commit()
+    return card_date_schema.dump(card_date)
+
+
+@card_bp.route("/date/<date_id>", methods=["DELETE"])
+@jwt_required()
+def delete_card_date(date_id: int):
+    card_date: CardDate = CardDate.get_or_404(date_id)
+    current_member = BoardAllowedUser.get_by_user_id(
+        card_date.board_id, current_user.id
+    )
+
+    if not current_member:
+        raise Forbidden()
+
+    card_service.delete_card_date(current_member, card_date)
+    db.session.commit()
+    return {}
