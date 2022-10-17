@@ -85,10 +85,12 @@ class CardDate(db.Model, BaseMixin):
     board_id = sqla.Column(sqla.Integer, sqla.ForeignKey("board.id"))
     is_due_date = sqla.Column(sqla.Boolean, default=False)
 
-    dt_from = sqla.Column(sqla.DateTime, nullable=False)
-    dt_to = sqla.Column(sqla.DateTime)
+    dt_from = sqla.Column(sqla.DateTime)
+    dt_to = sqla.Column(sqla.DateTime, nullable=False)
 
     description = sqla.Column(sqla.Text)
+    complete = sqla.Column(sqla.Boolean, default=False,
+                           nullable=False, server_default="0")
 
     board = sqla_orm.relationship("Board")
     card = sqla_orm.relationship("Card", back_populates="dates", uselist=False)
@@ -107,7 +109,6 @@ class Card(db.Model, BaseMixin):
 
     title = sqla.Column(sqla.Text, nullable=False)
     description = sqla.Column(sqla.Text)
-    due_date = sqla.Column(sqla.DateTime)
     position = sqla.Column(sqla.SmallInteger, default=0)
 
     board_list = sqla_orm.relationship(

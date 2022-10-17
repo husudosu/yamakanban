@@ -133,7 +133,8 @@ class BoardListSchema(SQLAlchemySchema):
     cards = fields.Nested(
         lambda: CardSchema,
         many=True,
-        only=("id", "title", "position", "list_id", "assigned_members"),
+        only=("id", "title", "position", "list_id",
+              "assigned_members", "dates",),
         dump_only=True
     )
 
@@ -293,10 +294,11 @@ class CardDateSchema(SQLAlchemySchema):
     board_id = fields.Integer(dump_only=True)
 
     is_due_date = fields.Boolean(missing=False)
-    dt_from = fields.DateTime(required=True)
-    dt_to = fields.DateTime(allow_none=True)
+    dt_from = fields.DateTime(required=False, allow_none=True)
+    dt_to = fields.DateTime(required=True)
 
     description = fields.String(allow_none=True)
+    complete = fields.Boolean(allow_none=False, missing=False)
 
     @validates_schema
     def validate_schema(self, data, **kwargs):
@@ -304,7 +306,7 @@ class CardDateSchema(SQLAlchemySchema):
         dt_from = data.get("dt_from", getattr(self.instance, "dt_from", None))
         dt_to = data.get("dt_to", getattr(self.instance, "dt_to", None))
 
-        if dt_to and dt_from > dt_to:
+        if dt_from and dt_from > dt_to:
             errors["dt_to"] = ["Can't be less than dt_from!"]
             errors["dt_from"] = ["Can't be greater than dt_to!"]
 
@@ -322,7 +324,6 @@ class CardSchema(SQLAlchemySchema):
 
     title = fields.String(required=True)
     description = fields.String(allow_none=True)
-    due_date = fields.DateTime(required=False, allow_none=True)
     position = fields.Integer()
 
     checklists = fields.Nested(CardChecklistSchema, many=True, dump_only=True)

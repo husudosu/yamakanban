@@ -299,8 +299,8 @@ def post_card_date(
                 entity_id=card_date.id,
                 changes=json.dumps(
                     {
-                        "dt_from": card_date.dt_from.strftime("%Y-%m-%d %H:%M:%S"),
-                        "dt_to": card_date.dt_to.strftime("%Y-%m-%d %H:%M:%S") if card_date.dt_to else None,
+                        "dt_from": card_date.dt_from.strftime("%Y-%m-%d %H:%M:%S") if card_date.dt_from else None,
+                        "dt_to": card_date.dt_to.strftime("%Y-%m-%d %H:%M:%S"),
                         "description": card_date.description
                     }
                 )
@@ -332,8 +332,8 @@ def patch_card_date(
                 entity_id=card_date.id,
                 changes=json.dumps(
                     {
-                        "dt_from": card_date.dt_from.strftime("%Y-%m-%d %H:%M:%S"),
-                        "dt_to": card_date.dt_to.strftime("%Y-%m-%d %H:%M:%S") if card_date.dt_to else None,
+                        "dt_from":  card_date.dt_from.strftime("%Y-%m-%d %H:%M:%S") if card_date.dt_from else None,
+                        "dt_to": card_date.dt_to.strftime("%Y-%m-%d %H:%M:%S"),
                         "description": card_date.description
                     }
                 )
