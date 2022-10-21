@@ -83,7 +83,6 @@ class CardDate(db.Model, BaseMixin):
     id = sqla.Column(sqla.Integer, primary_key=True)
     card_id = sqla.Column(sqla.Integer, sqla.ForeignKey("card.id"))
     board_id = sqla.Column(sqla.Integer, sqla.ForeignKey("board.id"))
-    is_due_date = sqla.Column(sqla.Boolean, default=False)
 
     dt_from = sqla.Column(sqla.DateTime)
     dt_to = sqla.Column(sqla.DateTime, nullable=False)
@@ -127,7 +126,7 @@ class Card(db.Model, BaseMixin):
     )
     dates = sqla_orm.relationship(
         "CardDate", cascade="all, delete-orphan",
-        order_by="asc(CardDate.dt_from)",
+        order_by="asc(CardDate.dt_to)",
         back_populates="card"
     )
 

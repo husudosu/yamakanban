@@ -7,6 +7,7 @@ import sqlalchemy as sqla
 from api.app import db
 from api.model import BoardPermission, CardActivityEvent
 from api.model.board import BoardAllowedUser
+from datetime import datetime, timezone
 
 from api.model.list import BoardList
 from api.model.card import (
@@ -279,17 +280,8 @@ def post_card_date(
     current_member: BoardAllowedUser, card: Card,
     data: dict
 ) -> CardDate:
+    # TODO: Convert timestamps into UTC, based on user time zone.
     if current_member.has_permission(BoardPermission.CARD_ADD_DATE):
-
-        if data.get("is_due_date", False) is True:
-            # Check if the card has other due date.
-            # We only allow one due date.
-            has_due_date = list(filter(lambda dt: dt.is_due_date, card.dates))
-            if len(has_due_date) > 0:
-                raise ValidationError({
-                    "is_due_date": ["Card already has a due date!"]
-                })
-
         card_date = CardDate(board_id=card.board_id, **data)
         card.dates.append(card_date)
         card.activities.append(
@@ -315,15 +307,6 @@ def patch_card_date(
     data: dict
 ) -> CardDate:
     if current_member.has_permission(BoardPermission.CARD_EDIT_DATE):
-        if data.get("is_due_date", False) is True:
-            # Check if the card has other due date.
-            # We only allow one due date.
-            has_due_date = list(
-                filter(lambda dt: dt.is_due_date and dt.id != card_date.id, card_date.card.dates))
-            if len(has_due_date) > 0:
-                raise ValidationError({
-                    "is_due_date": ["Card already has a due date!"]
-                })
         card_date.update(**data)
         card_date.card.activities.append(
             CardActivity(

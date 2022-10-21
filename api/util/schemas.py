@@ -293,7 +293,6 @@ class CardDateSchema(SQLAlchemySchema):
     card_id = fields.Integer(dump_only=True)
     board_id = fields.Integer(dump_only=True)
 
-    is_due_date = fields.Boolean(missing=False)
     dt_from = fields.DateTime(required=False, allow_none=True)
     dt_to = fields.DateTime(required=True)
 
