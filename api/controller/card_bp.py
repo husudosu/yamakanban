@@ -1,8 +1,9 @@
 from flask import Blueprint, jsonify, request, abort
 from flask_jwt_extended import jwt_required, current_user
+from api.app import socketio
+
 from webargs.flaskparser import use_args
 from werkzeug.exceptions import Forbidden
-from marshmallow.exceptions import ValidationError
 
 from api.app import db
 from api.model.board import BoardAllowedUser
@@ -64,7 +65,16 @@ def post_list_card(list_id: int):
     db.session.add(card)
     db.session.commit()
     db.session.refresh(card)
-    return card_schema.dump(card)
+
+    # Dump and send Socket.IO event.
+    dmp = card_schema.dump(card)
+    socketio.emit(
+        "card.new",
+        dmp,
+        namespace="/board",
+        to=f"board-{card.board_id}"
+    )
+    return card_schema.dump(dmp)
 
 
 @card_bp.route("/card/<card_id>", methods=["PATCH"])
@@ -84,8 +94,14 @@ def patch_list_card(card_id: int):
     )
     db.session.commit()
     db.session.refresh(updated_card)
-
-    return card_schema.dump(updated_card)
+    dmp = card_schema.dump(updated_card)
+    socketio.emit(
+        "card.update",
+        dmp,
+        namespace="/board",
+        to=f"board-{card.board_id}"
+    )
+    return dmp
 
 
 @card_bp.route("/card/<card_id>", methods=["DELETE"])
@@ -98,8 +114,17 @@ def delete_list_card(card_id: int):
     if not current_member:
         raise Forbidden()
 
+    # Dump and send Socket.IO event.
+    dmp = card_schema.dump(card)
     card_service.delete_card(current_member, card)
     db.session.commit()
+
+    socketio.emit(
+        "card.delete",
+        dmp,
+        namespace="/board",
+        to=f"board-{card.board_id}"
+    )
     return {}
 
 

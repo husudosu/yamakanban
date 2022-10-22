@@ -1,7 +1,7 @@
 from flask import Blueprint, jsonify, request
 from flask_jwt_extended import jwt_required, current_user
 
-from api.app import db
+from api.app import db, socketio
 from werkzeug.exceptions import Forbidden
 from api.model.board import Board, BoardAllowedUser
 from api.model.list import BoardList
@@ -92,4 +92,10 @@ def patch_card_order(list_id: int):
     list_service.update_cards_position(
         current_member, BoardList.get_or_404(list_id), request.json)
     db.session.commit()
+    socketio.emit(
+        "card.update.order",
+        {"order": request.json, "list_id": board_list.id},
+        namespace="/board",
+        to=f"board-{board_list.board_id}"
+    )
     return {}

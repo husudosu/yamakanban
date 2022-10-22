@@ -1,5 +1,3 @@
-
-import sqlalchemy as sqla
 from flask_jwt_extended import current_user, jwt_required
 
 from werkzeug.exceptions import Forbidden
@@ -11,7 +9,7 @@ from api.util.schemas import (
     BoardAllowedUserSchema, BoardRoleSchema, BoardSchema
 )
 
-from api.app import db
+from api.app import db, socketio
 
 board_bp = Blueprint("board_bp", __name__)
 
@@ -83,6 +81,12 @@ def patch_boardlists_order(board_id: int):
         request.json
     )
     db.session.commit()
+    socketio.emit(
+        "list.update.order",
+        request.json,
+        namespace="/board",
+        to=f"board-{board_id}"
+    )
     return {}
 
 

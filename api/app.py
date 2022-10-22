@@ -261,5 +261,5 @@ def create_app() -> Flask:
     # Register Socket.IO namespaces
     from api.socket import BoardNamespace
 
-    socketio.on_namespace(BoardNamespace('/'))
+    socketio.on_namespace(BoardNamespace("/board"))
     return app

@@ -319,8 +319,9 @@ class CardDateSchema(SQLAlchemySchema):
 
 class CardSchema(SQLAlchemySchema):
     id = fields.Integer(dump_only=True)
-    list_id = fields.Integer()
+    board_id = fields.Integer(dump_only=True)
 
+    list_id = fields.Integer()
     title = fields.String(required=True)
     description = fields.String(allow_none=True)
     position = fields.Integer()
