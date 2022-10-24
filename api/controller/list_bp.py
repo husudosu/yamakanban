@@ -41,7 +41,16 @@ def post_list(board_id: int):
     db.session.add(board_list)
     db.session.commit()
     db.session.refresh(board_list)
-    return board_lists_schema.dump(board_list)
+    dmp = board_lists_schema.dump(board_list)
+
+    socketio.emit(
+        "list.new",
+        dmp,
+        namespace="/board",
+        to=f"board-{board_list.board_id}"
+    )
+
+    return dmp
 
 
 @list_bp.route("/list/<list_id>", methods=["PATCH"])
@@ -60,7 +69,14 @@ def patch_list(list_id: int):
     )
     db.session.commit()
     db.session.refresh(updated_list)
-    return board_lists_schema.dump(updated_list)
+    dmp = board_lists_schema.dump(updated_list)
+    socketio.emit(
+        "list.update",
+        dmp,
+        namespace="/board",
+        to=f"board-{board_list.board_id}"
+    )
+    return dmp
 
 
 @list_bp.route("/list/<list_id>", methods=["DELETE"])
@@ -76,7 +92,15 @@ def delete_list(list_id: int):
         current_member,
         board_list
     )
+    dmp = board_lists_schema.dump(board_list)
     db.session.commit()
+
+    socketio.emit(
+        "list.delete",
+        dmp,
+        namespace="/board",
+        to=f"board-{board_list.board_id}"
+    )
     return {}
 
 
