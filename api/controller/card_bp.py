@@ -86,6 +86,8 @@ def patch_list_card(card_id: int):
 
     if not current_member:
         raise Forbidden()
+    # Get card list id before update
+    list_id = card.list_id
 
     updated_card = card_service.patch_card(
         current_member,
@@ -95,9 +97,13 @@ def patch_list_card(card_id: int):
     db.session.commit()
     db.session.refresh(updated_card)
     dmp = card_schema.dump(updated_card)
+    print(dmp)
     socketio.emit(
         "card.update",
-        dmp,
+        {
+            "card": dmp,
+            "from_list_id": list_id
+        },
         namespace="/board",
         to=f"board-{card.board_id}"
     )
