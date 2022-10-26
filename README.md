@@ -69,3 +69,11 @@ coverage report -m
 ## Optimized gunicorn launch
 
 gunicorn --worker-class=gevent --worker-connections=1000 --workers=3 run:app
+
+## Use this Socket.IO deploy
+
+gunicorn -k geventwebsocket.gunicorn.workers.GeventWebSocketWorker -w 1 run:app
+
+## Create self-signed key
+
+openssl req -x509 -nodes -days 365 -subj "/C=CA/ST=QC/O=Company, Inc./CN=mydomain.com" -addext "subjectAltName=DNS:mydomain.com" -newkey rsa:2048 -keyout nginx-selfsigned.key -out nginx-selfsigned.crt;

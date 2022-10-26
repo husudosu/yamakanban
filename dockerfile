@@ -29,7 +29,8 @@ COPY migrations migrations
 COPY frontend/dist dist
 COPY ./configs/nginx/http /etc/nginx/sites-enabled/default
 COPY ./configs/nginx/nginx.conf /etc/nginx/nginx.conf
-
+COPY nginx-selfsigned.crt /etc/ssl/certs/nginx-selfsigned.crt
+COPY nginx-selfsigned.key /etc/ssl/private/nginx-selfsigned.key
 RUN chmod 777 boot.sh
 
 EXPOSE 80

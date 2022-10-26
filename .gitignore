@@ -170,3 +170,5 @@ profile
 
 # Board background container
 api/static/backgrounds/*.*
+*.key
+*.crt
