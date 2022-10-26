@@ -1,4 +1,4 @@
-from flask import Blueprint, jsonify, request, abort
+from flask import Blueprint, jsonify, request
 from flask_jwt_extended import jwt_required, current_user
 from api.app import socketio
 
@@ -224,6 +224,13 @@ def assign_member(card_id: int):
     assignment = card_service.assign_card_member(
         current_member, card, card_member_schema.load(request.json))
     db.session.commit()
+    dmp = card_member_schema.dump(assignment)
+    socketio.emit(
+        "card.member.assigned",
+        dmp,
+        namespace="/board",
+        to=f"board-{card.board_id}"
+    )
     return card_member_schema.dump(assignment)
 
 
@@ -239,6 +246,7 @@ def deassign_member(card_id: int):
     card_service.deassign_card_member(
         current_member, card, card_member_schema.load(request.json)
     )
+    # TODO: We need card_member here to pass into Socket.IO emit.
     db.session.commit()
     return {}
 
