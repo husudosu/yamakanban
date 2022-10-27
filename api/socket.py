@@ -1,5 +1,22 @@
+import enum
 from flask_socketio import Namespace, emit, join_room, leave_room, rooms
 from flask import current_app
+
+
+class SIOEvent(enum.Enum):
+    """Socket.IO events"""
+
+    CARD_NEW = "card.new"
+    CARD_UPDATE = "card.update"
+    CARD_DELETE = "card.delete"
+    CARD_UPDATE_ORDER = "card.update.order"
+    CARD_MEMBER_ASSIGNED = "card.member.assigned"
+    CARD_MEMBER_DEASSIGNED = "card.member.deassigned"
+
+    LIST_NEW = "list.new"
+    LIST_UPDATE_ORDER = "list.update.order"
+    LIST_UPDATE = "list.update"
+    LIST_DELETE = "list.delete"
 
 
 class BoardNamespace(Namespace):
