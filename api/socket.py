@@ -1,5 +1,5 @@
 import enum
-from flask_socketio import Namespace, emit, join_room, leave_room, rooms
+from flask_socketio import Namespace, join_room, leave_room, rooms
 from flask import current_app
 
 
