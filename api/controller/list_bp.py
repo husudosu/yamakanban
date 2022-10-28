@@ -123,8 +123,8 @@ class ListCardOrderAPI(MethodView):
         return {}
 
 
-list_view = ListAPI.as_view('list-view')
-list_card_order_view = ListCardOrderAPI.as_view('list-card-order-view')
+list_view = ListAPI.as_view("list-view")
+list_card_order_view = ListCardOrderAPI.as_view("list-card-order-view")
 
 list_bp.add_url_rule("/board/<board_id>/list",
                      methods=["GET", "POST"], view_func=list_view)
