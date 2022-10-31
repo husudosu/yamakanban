@@ -245,7 +245,18 @@ class CardDateAPI(MethodView):
             card_date_schema.load(request.json)
         )
         db.session.commit()
-        return card_date_schema.dump(card_date)
+        dmp = card_date_schema.dump(card_date)
+
+        # NOTE: Adding list_id id. Maybe this should be moved
+        dmp["list_id"] = card.list_id
+
+        socketio.emit(
+            SIOEvent.CARD_DATE_NEW.value,
+            dmp,
+            namespace="/board",
+            to=f"board-{card.board_id}"
+        )
+        return dmp
 
     def patch(self, date_id: int):
         card_date: CardDate = CardDate.get_or_404(date_id)
@@ -266,7 +277,18 @@ class CardDateAPI(MethodView):
             )
         )
         db.session.commit()
-        return card_date_schema.dump(card_date)
+        dmp = card_date_schema.dump(card_date)
+
+        # NOTE: Adding list_id id. Maybe this should be moved
+        dmp["list_id"] = card_date.card.list_id
+
+        socketio.emit(
+            SIOEvent.CARD_DATE_UPDATE.value,
+            dmp,
+            namespace="/board",
+            to=f"board-{card_date.board_id}"
+        )
+        return dmp
 
     def delete(self, date_id: int):
         card_date: CardDate = CardDate.get_or_404(date_id)
@@ -276,9 +298,20 @@ class CardDateAPI(MethodView):
 
         if not current_member:
             raise Forbidden()
+        dmp = card_date_schema.dump(card_date)
+
+        # NOTE: Adding list_id id. Maybe this should be moved
+        dmp["list_id"] = card_date.card.list_id
 
         card_service.delete_card_date(current_member, card_date)
         db.session.commit()
+
+        socketio.emit(
+            SIOEvent.CARD_DATE_DELETE.value,
+            dmp,
+            namespace="/board",
+            to=f"board-{card_date.board_id}"
+        )
         return {}
 
 

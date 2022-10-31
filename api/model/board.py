@@ -5,6 +5,7 @@ import sqlalchemy.orm as sqla_orm
 from werkzeug.exceptions import NotFound
 from api.app import db
 from . import BaseMixin, BoardPermission
+from werkzeug.exceptions import NotFound
 
 
 class BoardRolePermission(db.Model, BaseMixin):

@@ -9,9 +9,15 @@ class SIOEvent(enum.Enum):
     CARD_NEW = "card.new"
     CARD_UPDATE = "card.update"
     CARD_DELETE = "card.delete"
+
     CARD_UPDATE_ORDER = "card.update.order"
+
     CARD_MEMBER_ASSIGNED = "card.member.assigned"
     CARD_MEMBER_DEASSIGNED = "card.member.deassigned"
+
+    CARD_DATE_NEW = "card.date.new"
+    CARD_DATE_UPDATE = "card.date.update"
+    CARD_DATE_DELETE = "card.data.delete"
 
     LIST_NEW = "list.new"
     LIST_UPDATE_ORDER = "list.update.order"

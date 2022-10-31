@@ -8,6 +8,7 @@ from flask_jwt_extended import current_user, jwt_required
 from api.model.board import Board, BoardAllowedUser, BoardRole
 from api.model.user import User
 from api.service import board as board_service
+from api.socket import SIOEvent
 from api.util.schemas import (
     BoardAllowedUserSchema, BoardRoleSchema, BoardSchema
 )
@@ -77,7 +78,7 @@ class BoardListsOrderAPI(MethodView):
         )
         db.session.commit()
         socketio.emit(
-            "list.update.order",
+            SIOEvent.LIST_UPDATE_ORDER.value,
             request.json,
             namespace="/board",
             to=f"board-{board_id}"
