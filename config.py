@@ -37,7 +37,8 @@ class Config:
     # But when I'm using Ionic apps they handle communication differently
     JWT_COOKIE_SECURE = False if os.environ.get(
         "FLASK_ENV") == "development" else True
-    JWT_COOKIE_SAMESITE = "Lax"
+    JWT_COOKIE_SAMESITE = "Lax" if os.environ.get(
+        "FLASK_ENV") == "development" else "Strict"
     JWT_SESSION_COOKIE = True
     JWT_COOKIE_CSRF_PROTECT = True
     JWT_CSRF_CHECK_FORM = True
