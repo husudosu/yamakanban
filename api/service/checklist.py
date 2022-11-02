@@ -159,26 +159,15 @@ def patch_checklist_item(
     item: ChecklistItem,
     data: dict
 ) -> ChecklistItem:
-    errors = {}
     if current_member.has_permission(BoardPermission.CHECKLIST_EDIT):
         # User can update everything
 
         # SQL validation
         if data.get("marked_complete_board_user_id"):
-            if not item.board.get_board_user(data["marked_complete_board_user_id"]):
-                errors["marked_complete_board_user_id"] = [
-                    "User not exists or not member of board!"]
+            BoardAllowedUser.get_or_404(data["marked_complete_board_user_id"])
 
         if data.get("assigned_board_user_id"):
-            assigned_user = item.board.get_board_user(
-                data["assigned_board_user_id"])
-
-            if not assigned_user:
-                errors["assigned_board_user_id"] = [
-                    "User not exists or not member of board!"]
-
-        if len(errors.keys()) > 0:
-            raise ValidationError(errors)
+            BoardAllowedUser.get_or_404(data["assigned_board_user_id"])
 
         checklist_item_process_changes(current_member, item, data)
 
