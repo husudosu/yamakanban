@@ -255,7 +255,7 @@ class ChecklistItemSchema(SQLAlchemySchema):
     assigned_board_user_id = fields.Integer(allow_none=True)
 
     title = fields.String(required=True)
-    due_date = fields.DateTime(allow_none=True)
+    due_date = fields.DateTime("%Y-%m-%d %H:%M:%S", allow_none=True)
     completed = fields.Boolean(load_default=False, allow_none=False)
     marked_complete_on = fields.DateTime(dump_only=True)
     position = fields.Integer()

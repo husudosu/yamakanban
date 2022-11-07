@@ -151,7 +151,42 @@ def checklist_item_process_changes(
         else:
             item.marked_complete_board_user_id = None
             item.marked_complete_on = None
-    # TODO: Add all checklist item events here!
+    if (
+        data.get("assigned_board_user_id") is not None and
+        data["assigned_board_user_id"] != item.assigned_board_user_id
+    ):
+        activity = CardActivity(
+            board_user_id=current_member.id,
+            event=CardActivityEvent.CHECKLIST_ITEM_USER_ASSIGN,
+            entity_id=item.id,
+            changes=json.dumps(
+                {
+                    "to": {
+                        "board_user_id": data["assigned_board_user_id"]
+                    }
+                }
+            )
+        )
+        item.checklist.card.activities.append(activity)
+    if (
+        data.get("due_date") is not None and
+        data["due_date"] != item.due_date
+    ):
+        activity = CardActivity(
+            board_user_id=current_member.id,
+            event=CardActivityEvent.CHECKLIST_ITEM_DUE_DATE,
+            entity_id=item.id,
+            changes=json.dumps(
+                {
+                    "from": {
+                        "due_date": item.due_date.strftime("%Y-%m-%d %H:%M:%S") if item.due_date else ""
+                    },
+                    "to": {
+                        "due_date": data["due_date"].strftime("%Y-%m-%d %H:%M:%S")
+                    }
+                }
+            )
+        )
 
 
 def patch_checklist_item(
