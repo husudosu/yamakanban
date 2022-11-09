@@ -152,7 +152,16 @@ class CardCommentAPI(MethodView):
         )
         db.session.commit()
         db.session.refresh(activity)
-        return card_activity_schema.dump(activity)
+        dmp = card_activity_schema.dump(activity)
+
+        socketio.emit(
+            SIOEvent.CARD_ACTIVITY.value,
+            dmp,
+            namespace="/board",
+            to=f"card-{card.id}"
+        )
+
+        return dmp
 
     def patch(self, comment_id: int):
         comment: CardComment = CardComment.get_or_404(comment_id)

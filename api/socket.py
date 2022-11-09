@@ -19,6 +19,8 @@ class SIOEvent(enum.Enum):
     CARD_DATE_UPDATE = "card.date.update"
     CARD_DATE_DELETE = "card.data.delete"
 
+    CARD_ACTIVITY = "card.activity"
+
     LIST_NEW = "list.new"
     LIST_UPDATE_ORDER = "list.update.order"
     LIST_UPDATE = "list.update"
@@ -40,7 +42,22 @@ class BoardNamespace(Namespace):
         for room in rooms():
             if room.startswith("board"):
                 current_app.logger.debug(
-                    f"Trafalgar Law: Leaving ROOM {room} SHAMBLES!")
+                    f"Trafalgar Law: Leaving Board ROOM {room} SHAMBLES!")
                 leave_room(room)
         join_room(room_name)
         current_app.logger.debug(rooms())
+
+    def on_card_change(self, data):
+        room_name = f"card-{data['card_id']}"
+        current_app.logger.debug(f"Subscribing to new card events: {data}")
+        # Leave all other card rooms
+        for room in rooms():
+            if room.startswith("card"):
+                current_app.logger.debug(
+                    f"Trafalgar Law: Leaving Card ROOM {room} SHAMBLES!")
+                leave_room(room)
+        join_room(room_name)
+        current_app.logger.debug(rooms())
+
+    def on_card_leave(self, data):
+        leave_room(f"card-{data['card_id']}")
