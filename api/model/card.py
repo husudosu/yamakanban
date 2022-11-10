@@ -116,7 +116,9 @@ class Card(db.Model, BaseMixin):
     activities = sqla_orm.relationship(
         "CardActivity", cascade="all, delete-orphan",
         back_populates="card",
-        order_by="desc(CardActivity.activity_on)"
+        order_by="desc(CardActivity.activity_on)",
+        lazy="noload",
+        uselist=True
     )
     checklists = sqla_orm.relationship(
         "CardChecklist", cascade="all, delete-orphan",

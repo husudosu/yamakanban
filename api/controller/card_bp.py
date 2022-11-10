@@ -5,9 +5,10 @@ from flask import Blueprint, request
 from flask.views import MethodView
 from flask_jwt_extended import jwt_required, current_user
 
+import sqlalchemy as sqla
 from api.app import db, socketio
 from api.model.board import BoardAllowedUser
-from api.model.card import Card, CardComment, CardDate
+from api.model.card import Card, CardComment, CardDate, CardActivity
 from api.model.list import BoardList
 
 from api.service import card as card_service
@@ -15,6 +16,7 @@ from api.socket import SIOEvent
 from api.util.schemas import (
     CardActivityPaginatedSchema, CardActivityQuerySchema,
     CardActivitySchema, CardDateSchema, CardMemberSchema, CardSchema, CardCommentSchema,
+    CardQuerySchema
 )
 
 card_bp = Blueprint("card_bp", __name__)
@@ -26,13 +28,22 @@ card_activity_paginated_schema = CardActivityPaginatedSchema()
 card_member_schema = CardMemberSchema()
 card_date_schema = CardDateSchema()
 activity_schema_query = CardActivityQuerySchema()
+card_query_schema = CardQuerySchema()
 
 
 class CardAPI(MethodView):
     decorators = [jwt_required()]
 
-    def get(self, card_id: int):
+    @use_args(card_query_schema, location="query")
+    def get(self, args, card_id: int):
         card: Card = Card.get_or_404(card_id)
+        # Load card activities here.
+        card.activities = CardActivity.query.filter(
+            CardActivity.card_id == card_id
+        ).order_by(
+            sqla.desc(CardActivity.activity_on)
+        ).limit(args["activity_count"]).all()
+
         if BoardAllowedUser.get_by_user_id(card.board_id, current_user.id):
             return card_schema.dump(card)
         raise Forbidden()

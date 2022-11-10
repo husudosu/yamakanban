@@ -331,7 +331,12 @@ class CardSchema(SQLAlchemySchema):
         CardMemberSchema(only=("board_user",)), many=True, dump_only=True
     )
     dates = fields.Nested(CardDateSchema, many=True, dump_only=True)
+    activities = fields.Nested(CardActivitySchema, many=True, dump_only=True)
 
     class Meta:
         model = Card
         unknown = EXCLUDE
+
+
+class CardQuerySchema(Schema):
+    activity_count = fields.Integer(missing=50)

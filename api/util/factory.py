@@ -1,4 +1,4 @@
-from api.model.board import Board
+from api.model.board import Board, BoardAllowedUser
 from api.model.user import User
 from api.model.list import BoardList
 from api.model.card import Card, CardComment
@@ -14,7 +14,7 @@ fake = faker.Faker()
 
 def create_card(user: User, boardlist: BoardList) -> Card:
     return card_service.post_card(
-        user,
+        BoardAllowedUser.get_by_user_id(boardlist.board_id, user.id),
         boardlist,
         data={
             "title": f"Card - {fake.first_name()} ",
@@ -25,7 +25,7 @@ def create_card(user: User, boardlist: BoardList) -> Card:
 
 def create_list(user: User, board: Board) -> BoardList:
     return list_service.post_board_list(
-        user,
+        BoardAllowedUser.get_by_user_id(board.board_id, user.id),
         board,
         data={
             "title": f"List - {fake.last_name()}"
@@ -44,7 +44,7 @@ def create_board(user: User) -> Board:
 
 def create_comment(user: User, card: Card) -> CardComment:
     return card_service.post_card_comment(
-        user,
+        BoardAllowedUser.get_by_user_id(card.board_id, user.id),
         card,
         {
             "comment": fake.paragraph(nb_sentences=1)
