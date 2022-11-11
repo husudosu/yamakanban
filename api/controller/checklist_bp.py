@@ -4,7 +4,6 @@ from flask import request, Blueprint
 from flask.views import MethodView
 from flask_jwt_extended import current_user, jwt_required
 
-from api.app import db
 from api.model.board import BoardAllowedUser
 from api.model.card import Card
 from api.model.checklist import CardChecklist, ChecklistItem
@@ -33,8 +32,6 @@ class ChecklistAPI(MethodView):
             card,
             checklist_schema.load(request.json)
         )
-        db.session.add(checklist)
-        db.session.commit()
         return checklist_schema.dump(checklist)
 
     def patch(self, checklist_id: int):
@@ -49,8 +46,6 @@ class ChecklistAPI(MethodView):
             checklist,
             checklist_schema.load(request.json)
         )
-        db.session.commit()
-        db.session.refresh(checklist)
         return checklist_schema.dump(checklist)
 
     def delete(self, checklist_id: int):
@@ -63,7 +58,6 @@ class ChecklistAPI(MethodView):
             current_member,
             checklist
         )
-        db.session.commit()
         return {}
 
 
@@ -82,8 +76,6 @@ class ChecklistItemAPI(MethodView):
             checklist,
             checklist_item_schema.load(request.json),
         )
-        db.session.commit()
-        db.session.refresh(item)
         return checklist_item_schema.dump(item)
 
     def patch(self, item_id: int):
@@ -98,8 +90,6 @@ class ChecklistItemAPI(MethodView):
             item,
             checklist_item_schema.load(request.json, partial=True)
         )
-        db.session.commit()
-        db.session.refresh(item)
         return checklist_item_schema.dump(item)
 
     def delete(self, item_id: int):
@@ -110,8 +100,6 @@ class ChecklistItemAPI(MethodView):
             raise Forbidden()
 
         checklist_service.delete_checklist_item(current_member, item)
-
-        db.session.commit()
         return {}
 
 
@@ -130,7 +118,7 @@ class ChecklistItemOrderAPI(MethodView):
             CardChecklist.get_or_404(checklist_id),
             request.json
         )
-        db.session.commit()
+
         return {}
 
 

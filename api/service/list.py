@@ -33,6 +33,11 @@ def post_board_list(current_member: BoardAllowedUser, board: Board, data: dict) 
         if position_max[0] is not None:
             boardlist.position = position_max[0] + 1
         board.lists.append(boardlist)
+
+        db.session.add(boardlist)
+        db.session.commit()
+        db.session.refresh(boardlist)
+
         return boardlist
     raise Forbidden()
 
@@ -43,6 +48,8 @@ def patch_board_list(
     if current_member.has_permission(BoardPermission.LIST_EDIT):
         # TODO Add activity log entry too!
         board_list.update(**data)
+        db.session.commit()
+        db.session.refresh(board_list)
         return board_list
     raise Forbidden()
 
@@ -50,6 +57,7 @@ def patch_board_list(
 def delete_board_list(current_member: BoardAllowedUser, board_list: BoardList):
     if current_member.has_permission(BoardPermission.LIST_DELETE):
         db.session.delete(board_list)
+        db.session.commit()
     else:
         raise Forbidden()
 
@@ -63,3 +71,4 @@ def update_cards_position(
             db.session.query(Card).filter(
                 sqla.and_(Card.id == item, Card.list_id == board_list.id)
             ).update({"position": index})
+        db.session.commit()

@@ -60,10 +60,6 @@ class CardAPI(MethodView):
             board_list,
             card_schema.load(request.json)
         )
-        db.session.add(card)
-        db.session.commit()
-        db.session.refresh(card)
-
         # Dump and send Socket.IO event.
         dmp = card_schema.dump(card)
         socketio.emit(
@@ -89,8 +85,7 @@ class CardAPI(MethodView):
             card,
             card_schema.load(request.json, partial=True)
         )
-        db.session.commit()
-        db.session.refresh(updated_card)
+
         dmp = card_schema.dump(updated_card)
         socketio.emit(
             SIOEvent.CARD_UPDATE.value,
@@ -114,7 +109,6 @@ class CardAPI(MethodView):
         # Dump and send Socket.IO event.
         dmp = card_schema.dump(card)
         card_service.delete_card(current_member, card)
-        db.session.commit()
 
         socketio.emit(
             SIOEvent.CARD_DELETE.value,
@@ -161,8 +155,7 @@ class CardCommentAPI(MethodView):
             card,
             card_comment_schema.load(request.json)
         )
-        db.session.commit()
-        db.session.refresh(activity)
+
         dmp = card_activity_schema.dump(activity)
 
         socketio.emit(
@@ -187,8 +180,7 @@ class CardCommentAPI(MethodView):
             comment,
             card_comment_schema.load(request.json, partial=True)
         )
-        db.session.commit()
-        db.session.refresh(updated_comment)
+
         return card_comment_schema.dump(updated_comment)
 
     def delete(self, comment_id: int):
@@ -203,7 +195,7 @@ class CardCommentAPI(MethodView):
             current_user,
             CardComment.get_or_404(comment_id)
         )
-        db.session.commit()
+
         return {}
 
 
@@ -218,10 +210,20 @@ class CardAssignMemberAPI(MethodView):
         if not current_member:
             raise Forbidden()
 
-        assignment = card_service.assign_card_member(
+        assignment, activity = card_service.assign_card_member(
             current_member, card, card_member_schema.load(request.json))
-        db.session.commit()
+
         dmp = card_member_schema.dump(assignment)
+
+        # Send card activity
+        socketio.emit(
+            SIOEvent.CARD_ACTIVITY.value,
+            card_activity_schema.dump(activity),
+            namespace="/board",
+            to=f"card-{card.id}"
+        )
+
+        # Send member assigned
         socketio.emit(
             SIOEvent.CARD_MEMBER_ASSIGNED.value,
             dmp,
@@ -241,11 +243,16 @@ class CardDeassignAPI(MethodView):
 
         if not current_member:
             raise Forbidden()
-        card_service.deassign_card_member(
+        activity = card_service.deassign_card_member(
             current_member, card, card_member_schema.load(request.json)
         )
-        # TODO: We need card_member here to pass into Socket.IO emit.
-        db.session.commit()
+
+        socketio.emit(
+            SIOEvent.CARD_ACTIVITY.value,
+            card_activity_schema.dump(activity),
+            namespace="/board",
+            to=f"board-{card.board_id}"
+        )
         return {}
 
 
@@ -264,7 +271,7 @@ class CardDateAPI(MethodView):
             card,
             card_date_schema.load(request.json)
         )
-        db.session.commit()
+
         dmp = card_date_schema.dump(card_date)
 
         # NOTE: Adding list_id id. Maybe this should be moved
@@ -296,7 +303,7 @@ class CardDateAPI(MethodView):
                 session=db.session
             )
         )
-        db.session.commit()
+
         dmp = card_date_schema.dump(card_date)
 
         # NOTE: Adding list_id id. Maybe this should be moved
@@ -324,7 +331,6 @@ class CardDateAPI(MethodView):
         dmp["list_id"] = card_date.card.list_id
 
         card_service.delete_card_date(current_member, card_date)
-        db.session.commit()
 
         socketio.emit(
             SIOEvent.CARD_DATE_DELETE.value,

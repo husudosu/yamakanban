@@ -39,6 +39,8 @@ def post_card_checklist(
                 })
             )
         )
+        db.session.add(checklist)
+        db.session.commit()
         return checklist
     raise Forbidden()
 
@@ -50,6 +52,8 @@ def patch_card_checklist(
 ) -> CardChecklist:
     if current_member.has_permission(BoardPermission.CHECKLIST_EDIT):
         checklist.update(**data)
+        db.session.commit()
+        db.session.refresh(checklist)
         return checklist
     raise Forbidden()
 
@@ -66,6 +70,7 @@ def delete_card_checklist(
                 event=CardActivityEvent.CHECKLIST_DELETE.value
             )
         )
+        db.session.commit()
     else:
         raise Forbidden()
 
@@ -110,6 +115,8 @@ def post_checklist_item(
 
         checklist.items.append(item)
         # TODO Send Email notification for assigned user
+        db.session.commit()
+        db.session.refresh(item)
         return item
     raise Forbidden()
 
@@ -207,12 +214,20 @@ def patch_checklist_item(
         checklist_item_process_changes(current_member, item, data)
 
         item.update(**data)
+
+        db.session.commit()
+        db.session.refresh(item)
+
         return item
     elif current_member.has_permission(BoardPermission.CHECKLIST_ITEM_MARK):
         # Only allow marking for member
         # TODO: raise forbidden if there's other fields on data
         checklist_item_process_changes(current_member, item, data)
         item.update(completed=data["completed"])
+
+        db.session.commit()
+        db.session.refresh(item)
+
         return item
     raise Forbidden()
 
@@ -223,6 +238,7 @@ def delete_checklist_item(
 ):
     if current_member.has_permission(BoardPermission.CHECKLIST_EDIT):
         db.session.delete(item)
+        db.session.commit()
     else:
         raise Forbidden()
 
@@ -238,3 +254,4 @@ def update_items_position(
                     ChecklistItem.checklist_id == checklist.id
                 )
             ).update({"position": index})
+            db.session.commit()

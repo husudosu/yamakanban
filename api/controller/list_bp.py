@@ -4,7 +4,7 @@ from flask import jsonify, request, Blueprint
 from flask.views import MethodView
 from flask_jwt_extended import current_user, jwt_required
 
-from api.app import db, socketio
+from api.app import socketio
 from api.model.board import Board, BoardAllowedUser
 from api.model.list import BoardList
 from api.socket import SIOEvent
@@ -41,9 +41,7 @@ class ListAPI(MethodView):
             board,
             board_lists_schema.load(request.json)
         )
-        db.session.add(board_list)
-        db.session.commit()
-        db.session.refresh(board_list)
+
         dmp = board_lists_schema.dump(board_list)
 
         socketio.emit(
@@ -67,8 +65,7 @@ class ListAPI(MethodView):
             board_list,
             board_lists_schema.load(request.json, partial=True)
         )
-        db.session.commit()
-        db.session.refresh(updated_list)
+
         dmp = board_lists_schema.dump(updated_list)
         socketio.emit(
             SIOEvent.LIST_UPDATE.value,
@@ -90,7 +87,6 @@ class ListAPI(MethodView):
             board_list
         )
         dmp = board_lists_schema.dump(board_list)
-        db.session.commit()
 
         socketio.emit(
             SIOEvent.LIST_DELETE.value,
@@ -113,7 +109,7 @@ class ListCardOrderAPI(MethodView):
 
         list_service.update_cards_position(
             current_member, BoardList.get_or_404(list_id), request.json)
-        db.session.commit()
+
         socketio.emit(
             SIOEvent.CARD_UPDATE_ORDER.value,
             {"order": request.json, "list_id": board_list.id},

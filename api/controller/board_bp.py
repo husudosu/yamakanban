@@ -13,7 +13,7 @@ from api.util.schemas import (
     BoardAllowedUserSchema, BoardRoleSchema, BoardSchema
 )
 
-from api.app import db, socketio
+from api.app import socketio
 
 board_bp = Blueprint("board_bp", __name__)
 
@@ -46,9 +46,6 @@ class BoardAPI(MethodView):
             current_user,
             board_schema.load(request.json)
         )
-        db.session.add(board)
-        db.session.commit()
-        db.session.refresh(board)
         return board_schema.dump(board)
 
     def patch(self, board_id: int):
@@ -57,13 +54,10 @@ class BoardAPI(MethodView):
             Board.get_or_404(board_id),
             board_schema.load(request.json)
         )
-        db.session.commit()
-        db.session.refresh(updated_board)
         return board_schema.dump(updated_board)
 
     def delete(self, board_id: int):
         board_service.delete_board(current_user, Board.get_or_404(board_id))
-        db.session.commit()
         return {}
 
 
@@ -76,7 +70,6 @@ class BoardListsOrderAPI(MethodView):
             Board.get_or_404(board_id),
             request.json
         )
-        db.session.commit()
         socketio.emit(
             SIOEvent.LIST_UPDATE_ORDER.value,
             request.json,
@@ -146,7 +139,6 @@ class BoardMemberAPI(MethodView):
             User.get_or_404(data["user_id"]),
             BoardRole.get_board_role_or_404(board_id, data["board_role_id"])
         )
-        db.session.commit()
         return board_allowed_user_schema.dump(member)
 
     def patch(self, board_id: int, user_id: int):
@@ -158,8 +150,6 @@ class BoardMemberAPI(MethodView):
             BoardRole.get_board_role_or_404(
                 board_id, request.json["board_role_id"])
         )
-        db.session.commit()
-        db.session.refresh(member)
         return board_allowed_user_schema.dump(member)
 
     def delete(self, board_id: int, user_id: int):
@@ -178,7 +168,6 @@ class BoardMemberAPI(MethodView):
             current_member,
             member
         )
-        db.session.commit()
         return {}
 
 
@@ -194,7 +183,6 @@ class BoardMemberActivateAPI(MethodView):
             raise Forbidden()
 
         board_service.activate_member(member, member_to_activate)
-        db.session.commit()
         return {}
 
 

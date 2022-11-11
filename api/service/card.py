@@ -7,7 +7,6 @@ import sqlalchemy as sqla
 from api.app import db
 from api.model import BoardPermission, CardActivityEvent
 from api.model.board import BoardAllowedUser
-from datetime import datetime, timezone
 
 from api.model.list import BoardList
 from api.model.card import (
@@ -63,6 +62,11 @@ def post_card(current_member: BoardAllowedUser, board_list: BoardList, data: dic
         ).fetchone()
         if position_max[0] is not None:
             card.position = position_max[0] + 1
+
+        db.session.add(card)
+        db.session.commit()
+        db.session.refresh(card)
+
         return card
     raise Forbidden()
 
@@ -112,6 +116,10 @@ def patch_card(current_member: BoardAllowedUser, card: Card, data: dict) -> Card
                 card.list_id = value
             elif hasattr(card, key):
                 setattr(card, key, value)
+
+        db.session.commit()
+        db.session.refresh(card)
+
         return card
     raise Forbidden()
 
@@ -134,6 +142,8 @@ def post_card_comment(
             comment=comment
         )
         card.activities.append(activity)
+        db.session.commit()
+        db.session.refresh(activity)
         return activity
     raise Forbidden()
 
@@ -150,6 +160,8 @@ def patch_card_comment(
                 entity_id=comment.id
             )
         )
+        db.session.commit()
+        db.session.refresh(comment)
         return comment
     raise Forbidden()
 
@@ -159,6 +171,7 @@ def delete_card_comment(
 ):
     if (current_member.id == comment.board_user_id):
         comment.delete()
+        db.session.commit()
     else:
         raise Forbidden()
 
@@ -174,6 +187,7 @@ def delete_card(current_member: BoardAllowedUser, card: Card):
     """
     if current_member.has_permission(BoardPermission.CARD_DELETE):
         db.session.delete(card)
+        db.session.commit()
     else:
         raise Forbidden()
 
@@ -204,7 +218,7 @@ def get_card_activities(card: Card, args: dict = {}):
 def assign_card_member(
     current_member: BoardAllowedUser, card: Card,
     data: dict
-) -> CardMember:
+) -> typing.Tuple[CardMember, CardActivity]:
     if current_member.has_permission(BoardPermission.CARD_ASSIGN_MEMBER):
         # Get member
         member = BoardAllowedUser.query.filter(
@@ -230,24 +244,25 @@ def assign_card_member(
         # TODO: Implement send notification
 
         # Add card activity
-        card.activities.append(
-            CardActivity(
-                board_user_id=current_member.id,
-                event=CardActivityEvent.CARD_ASSIGN_MEMBER,
-                entity_id=member.id,
-                changes=json.dumps(
-                    {"to": {"board_user_id": member_assignment.board_user_id}}
-                )
+        activity = CardActivity(
+            card_id=card.id,
+            board_user_id=current_member.id,
+            event=CardActivityEvent.CARD_ASSIGN_MEMBER,
+            entity_id=member.id,
+            changes=json.dumps(
+                {"to": {"board_user_id": member_assignment.board_user_id}}
             )
         )
-        return member_assignment
+        card.activities.append(activity)
+        db.session.commit()
+        return member_assignment, activity
     raise Forbidden()
 
 
 def deassign_card_member(
     current_member: BoardAllowedUser, card: Card,
     data: dict
-):
+) -> CardActivity:
     if current_member.has_permission(BoardPermission.CARD_DEASSIGN_MEMBER):
         # Get member
         card_member: CardMember = CardMember.query.filter(
@@ -262,16 +277,18 @@ def deassign_card_member(
                 {"board_user_id": ["Board user not assigned to this card."]}
             )
         # Add activity to card
-        card.activities.append(
-            CardActivity(
-                board_user_id=current_member.id,
-                event=CardActivityEvent.CARD_DEASSIGN_MEMBER,
-                changes=json.dumps(
-                    {"from": {"board_user_id": card_member.board_user_id}}
-                )
+        activity = CardActivity(
+            card_id=card.id,
+            board_user_id=current_member.id,
+            event=CardActivityEvent.CARD_DEASSIGN_MEMBER,
+            changes=json.dumps(
+                {"from": {"board_user_id": card_member.board_user_id}}
             )
         )
+        card.activities.append(activity)
         db.session.delete(card_member)
+        db.session.commit()
+        return activity
     else:
         raise Forbidden()
 
@@ -298,6 +315,7 @@ def post_card_date(
                 )
             )
         )
+        db.session.commit()
         return card_date
     raise Forbidden()
 
@@ -322,6 +340,7 @@ def patch_card_date(
                 )
             )
         )
+        db.session.commit()
         return card_date
     raise Forbidden()
 
@@ -336,5 +355,6 @@ def delete_card_date(current_member: BoardAllowedUser, card_date: CardDate):
             )
         )
         db.session.delete(card_date)
+        db.session.commit()
     else:
         raise Forbidden()

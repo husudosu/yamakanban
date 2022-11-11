@@ -51,6 +51,8 @@ def post_board(current_user: User, data: dict) -> Board:
         Board: Board ORM object
     """
     board = Board(owner_id=current_user.id, **data)
+    db.session.add(board)
+    db.session.commit()
     return board
 
 
@@ -70,6 +72,8 @@ def patch_board(current_user: User, board: Board, data: dict) -> Board:
     """
     if board.owner_id == current_user.id:
         board.update(**data)
+        db.session.commit()
+        db.session.refresh(board)
         return board
     raise Forbidden()
 
@@ -86,6 +90,7 @@ def delete_board(current_user: User, board: Board):
     """
     if board.owner_id == current_user.id:
         db.session.delete(board)
+        db.session.commit()
     else:
         raise Forbidden()
 
@@ -101,6 +106,7 @@ def update_boardlists_position(
                     BoardList.board_id == board.id
                 )
             ).update({"position": index})
+    db.session.commit()
 
 
 def get_board_claims(current_user: User, board: Board) -> BoardAllowedUser:
@@ -209,6 +215,7 @@ def add_member(
         board_role_id=new_member_role.id,
     )
     board.board_users.append(member)
+    db.session.commit()
     return member
 
 
@@ -225,6 +232,8 @@ def update_member_role(
         raise Forbidden()
     member = board.get_board_user(user.id)
     member.role = role
+    db.session.commit()
+    db.session.refresh(member)
     return member
 
 
@@ -242,6 +251,7 @@ def remove_member(
         member.is_deleted = True
     else:
         db.session.delete(member)
+        db.session.commit()
 
 
 def activate_member(
@@ -251,3 +261,4 @@ def activate_member(
         raise Forbidden()
 
     member.is_deleted = False
+    db.session.commit()
