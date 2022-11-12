@@ -17,8 +17,7 @@ from api.socket import SIOEvent
 from api.util.schemas import (CardActivityPaginatedSchema,
                               CardActivityQuerySchema, CardActivitySchema,
                               CardCommentSchema, CardDateSchema,
-                              CardMemberSchema, CardQuerySchema, CardSchema,
-                              SIODeletionEventSchema, SIOEventSchema)
+                              CardMemberSchema, CardQuerySchema, CardSchema, SIOEventSchema)
 
 card_bp = Blueprint("card_bp", __name__)
 
