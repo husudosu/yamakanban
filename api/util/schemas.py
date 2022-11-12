@@ -328,7 +328,8 @@ class CardSchema(SQLAlchemySchema):
 
     checklists = fields.Nested(CardChecklistSchema, many=True, dump_only=True)
     assigned_members = fields.Nested(
-        CardMemberSchema(only=("board_user",)), many=True, dump_only=True
+        CardMemberSchema(many=True),
+        dump_only=True
     )
     dates = fields.Nested(CardDateSchema, many=True, dump_only=True)
     activities = fields.Nested(CardActivitySchema, many=True, dump_only=True)
@@ -340,3 +341,9 @@ class CardSchema(SQLAlchemySchema):
 
 class CardQuerySchema(Schema):
     activity_count = fields.Integer(missing=50)
+
+
+class SIOEventSchema(Schema):
+    list_id = fields.Integer(required=True)
+    card_id = fields.Integer(required=True)
+    entity = fields.Dict(required=True)

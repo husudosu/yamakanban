@@ -61,3 +61,4 @@ class BoardNamespace(Namespace):
 
     def on_card_leave(self, data):
         leave_room(f"card-{data['card_id']}")
+        current_app.logger.debug(rooms())

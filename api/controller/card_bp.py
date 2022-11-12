@@ -1,23 +1,24 @@
-from werkzeug.exceptions import Forbidden
-from webargs.flaskparser import use_args
-
+import sqlalchemy as sqla
 from flask import Blueprint, request
 from flask.views import MethodView
-from flask_jwt_extended import jwt_required, current_user
+from flask_jwt_extended import current_user, jwt_required
+from webargs.flaskparser import use_args
+from werkzeug.exceptions import Forbidden
 
-import sqlalchemy as sqla
+from marshmallow.exceptions import ValidationError
+
 from api.app import db, socketio
 from api.model.board import BoardAllowedUser
-from api.model.card import Card, CardComment, CardDate, CardActivity
+from api.model.card import (Card, CardActivity, CardComment, CardDate,
+                            CardMember)
 from api.model.list import BoardList
-
 from api.service import card as card_service
 from api.socket import SIOEvent
-from api.util.schemas import (
-    CardActivityPaginatedSchema, CardActivityQuerySchema,
-    CardActivitySchema, CardDateSchema, CardMemberSchema, CardSchema, CardCommentSchema,
-    CardQuerySchema
-)
+from api.util.schemas import (CardActivityPaginatedSchema,
+                              CardActivityQuerySchema, CardActivitySchema,
+                              CardCommentSchema, CardDateSchema,
+                              CardMemberSchema, CardQuerySchema, CardSchema,
+                              SIODeletionEventSchema, SIOEventSchema)
 
 card_bp = Blueprint("card_bp", __name__)
 
@@ -29,6 +30,7 @@ card_member_schema = CardMemberSchema()
 card_date_schema = CardDateSchema()
 activity_schema_query = CardActivityQuerySchema()
 card_query_schema = CardQuerySchema()
+sio_event_schema = SIOEventSchema()
 
 
 class CardAPI(MethodView):
@@ -222,11 +224,14 @@ class CardAssignMemberAPI(MethodView):
             namespace="/board",
             to=f"card-{card.id}"
         )
-
         # Send member assigned
         socketio.emit(
             SIOEvent.CARD_MEMBER_ASSIGNED.value,
-            dmp,
+            sio_event_schema.dump({
+                "list_id": card.list_id,
+                "card_id": card.id,
+                "entity": dmp
+            }),
             namespace="/board",
             to=f"board-{card.board_id}"
         )
@@ -243,13 +248,35 @@ class CardDeassignAPI(MethodView):
 
         if not current_member:
             raise Forbidden()
+        card_member: CardMember = CardMember.query.filter(
+            sqla.and_(
+                CardMember.card_id == card.id,
+                CardMember.board_user_id == request.json["board_user_id"]
+            )
+        ).first()
+
+        if not card_member:
+            raise ValidationError(
+                {"board_user_id": ["Board user not assigned to this card."]}
+            )
         activity = card_service.deassign_card_member(
-            current_member, card, card_member_schema.load(request.json)
+            current_member, card_member, card
         )
 
         socketio.emit(
             SIOEvent.CARD_ACTIVITY.value,
             card_activity_schema.dump(activity),
+            namespace="/board",
+            to=f"card-{card.id}"
+        )
+        # Send member assigned
+        socketio.emit(
+            SIOEvent.CARD_MEMBER_DEASSIGNED.value,
+            sio_event_schema.dump({
+                "list_id": card.list_id,
+                "card_id": card.id,
+                "entity": card_member_schema.dump(card_member)
+            }),
             namespace="/board",
             to=f"board-{card.board_id}"
         )

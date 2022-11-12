@@ -260,22 +260,11 @@ def assign_card_member(
 
 
 def deassign_card_member(
-    current_member: BoardAllowedUser, card: Card,
-    data: dict
+    current_member: BoardAllowedUser, card_member: CardMember, card: Card
 ) -> CardActivity:
     if current_member.has_permission(BoardPermission.CARD_DEASSIGN_MEMBER):
         # Get member
-        card_member: CardMember = CardMember.query.filter(
-            sqla.and_(
-                CardMember.card_id == card.id,
-                CardMember.board_user_id == data["board_user_id"]
-            )
-        ).first()
 
-        if not card_member:
-            raise ValidationError(
-                {"board_user_id": ["Board user not assigned to this card."]}
-            )
         # Add activity to card
         activity = CardActivity(
             card_id=card.id,
