@@ -15,9 +15,10 @@ from flask_jwt_extended import (
     JWTManager, get_jwt, create_access_token,
     get_jwt_identity, set_access_cookies,
 )
+from jwt import ExpiredSignatureError
 from flask_mail import Mail
 from flask_compress import Compress
-from flask_socketio import SocketIO
+from flask_socketio import SocketIO, disconnect
 
 from marshmallow.exceptions import ValidationError
 
@@ -79,6 +80,14 @@ def create_app() -> Flask:
     compress.init_app(app)
     socketio.init_app(app, cors_allowed_origins="*",
                       logger=True, engineio_logger=False)
+
+    @socketio.on_error_default
+    def sio_error_handler(e: Exception):
+        if isinstance(e, ExpiredSignatureError):
+            app.logger.debug(
+                "JWT Token expired, we should disconnect.")
+        else:
+            app.logger.exception("Socket.IO Exception:")
 
     @jwt.user_identity_loader
     def user_identity_lookup(user):

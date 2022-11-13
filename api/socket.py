@@ -1,5 +1,6 @@
 import enum
 from flask_socketio import Namespace, join_room, leave_room, rooms
+from flask_jwt_extended import current_user, jwt_required
 from flask import current_app
 
 
@@ -29,16 +30,21 @@ class SIOEvent(enum.Enum):
 
 class BoardNamespace(Namespace):
 
+    @jwt_required()
     def on_connect(self):
-        current_app.logger.info("Client connected.")
+        current_app.logger.debug(
+            f"Client connected identity: {current_user.username}.")
 
     def on_disconnect(self):
-        current_app.logger.info("Client disconnected.")
+        current_app.logger.debug("Client disconnected.")
 
+    @jwt_required()
     def on_board_change(self, data):
         room_name = f"board-{data['board_id']}"
-        current_app.logger.debug(f"Subscribing to new board events: {data}")
+        current_app.logger.debug(
+            f"Subscribing to new board events: {data}")
         # Leave all other board rooms
+
         for room in rooms():
             if room.startswith("board"):
                 current_app.logger.debug(
@@ -47,6 +53,7 @@ class BoardNamespace(Namespace):
         join_room(room_name)
         current_app.logger.debug(rooms())
 
+    @jwt_required()
     def on_card_change(self, data):
         room_name = f"card-{data['card_id']}"
         current_app.logger.debug(f"Subscribing to new card events: {data}")
@@ -57,8 +64,4 @@ class BoardNamespace(Namespace):
                     f"Trafalgar Law: Leaving Card ROOM {room} SHAMBLES!")
                 leave_room(room)
         join_room(room_name)
-        current_app.logger.debug(rooms())
-
-    def on_card_leave(self, data):
-        leave_room(f"card-{data['card_id']}")
         current_app.logger.debug(rooms())

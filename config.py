@@ -26,7 +26,7 @@ class Config:
     CORS_SUPPORTS_CREDENTIALS = True
     # JWT settings
     JWT_SECRET_KEY = os.environ.get("JWT_SECRET_KEY", "super-secret")
-    JWT_ACCESS_TOKEN_EXPIRES = timedelta(minutes=60)
+    JWT_ACCESS_TOKEN_EXPIRES = timedelta(seconds=10)
     JWT_REFRESH_TOKEN_EXPIRES = timedelta(minutes=120)
     JWT_TOKEN_LOCATION = ["cookies"]
     JWT_COOKIE_CSRF_PROTECT = True
