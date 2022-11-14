@@ -2,10 +2,9 @@
 import typing
 import sqlalchemy as sqla
 import sqlalchemy.orm as sqla_orm
-from werkzeug.exceptions import NotFound
 from api.app import db
 from . import BaseMixin, BoardPermission
-from werkzeug.exceptions import NotFound
+from werkzeug.exceptions import NotFound, Forbidden
 
 
 class BoardRolePermission(db.Model, BaseMixin):
@@ -70,6 +69,19 @@ class BoardAllowedUser(db.Model, BaseMixin):
                 cls.user_id == user_id
             )
         ).first()
+
+    @classmethod
+    def get_by_usr_or_403(cls, board_id: int, user_id: int):
+        usr = cls.query.filter(
+            sqla.and_(
+                cls.board_id == board_id,
+                cls.user_id == user_id
+            )
+        ).first()
+
+        if usr:
+            return usr
+        raise Forbidden()
 
     def has_permission(self, permission: BoardPermission):
         if self.is_deleted:

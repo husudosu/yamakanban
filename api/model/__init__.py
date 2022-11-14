@@ -14,9 +14,6 @@ class RestEnum(enum.IntEnum):
 
 
 class BaseMixin(object):
-    """
-    BaseMixin class contains.
-    """
 
     @classmethod
     def get_or_404(cls, id):

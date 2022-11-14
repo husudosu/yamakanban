@@ -71,7 +71,7 @@ def post_card(current_member: BoardAllowedUser, board_list: BoardList, data: dic
     raise Forbidden()
 
 
-def patch_card(current_member: BoardAllowedUser, card: Card, data: dict) -> Card:
+def patch_card(current_member: BoardAllowedUser, card: Card, data: dict) -> typing.Tuple[Card, typing.List[typing.List[CardActivity]]]:
     """Updates a card
 
     Args:
@@ -85,6 +85,7 @@ def patch_card(current_member: BoardAllowedUser, card: Card, data: dict) -> Card
     Returns:
         Card: Updated card ORM object
     """
+    activities = []
     if (current_member.has_permission(BoardPermission.CARD_EDIT)):
         for key, value in data.items():
             if key == "list_id" and card.list_id != value:
@@ -114,13 +115,14 @@ def patch_card(current_member: BoardAllowedUser, card: Card, data: dict) -> Card
                 )
                 card.activities.append(activity)
                 card.list_id = value
+                activities.append(activity)
             elif hasattr(card, key):
                 setattr(card, key, value)
 
         db.session.commit()
         db.session.refresh(card)
 
-        return card
+        return card, activities
     raise Forbidden()
 
 

@@ -81,13 +81,22 @@ class CardAPI(MethodView):
         # Get card list id before update
         list_id = card.list_id
 
-        updated_card = card_service.patch_card(
+        updated_card, activities = card_service.patch_card(
             current_member,
             card,
             card_schema.load(request.json, partial=True)
         )
 
         dmp = card_schema.dump(updated_card)
+        # Send card activities
+        for activity in activities:
+            socketio.emit(
+                SIOEvent.CARD_ACTIVITY.value,
+                card_activity_schema.dump(activity),
+                namespace="/board",
+                to=f"card-{card.id}"
+            )
+        # Card update
         socketio.emit(
             SIOEvent.CARD_UPDATE.value,
             {
