@@ -4,6 +4,7 @@ import json
 from werkzeug.exceptions import Forbidden, NotFound
 from marshmallow.exceptions import ValidationError
 import sqlalchemy as sqla
+import sqlalchemy.orm as sqla_orm
 from flask_sqlalchemy import Pagination
 
 from api.app import db, socketio
@@ -227,19 +228,19 @@ class CardService:
         Raises:
             Forbidden: Don't have permission to delete cards
         """
-        card: Card = Card.get_or_404(card_id)
+        card: Card = Card.query.filter(Card.id == card_id).options(
+            sqla_orm.joinedload(Card.activities)).first()
+        if not card:
+            raise NotFound("Card not found.")
+
         current_member = BoardAllowedUser.get_by_usr_or_403(
             card.board_id, current_user.id)
 
         if current_member.has_permission(BoardPermission.CARD_DELETE):
             list_id = card.list_id
-            # We don't load activities by default so cascade delete won't  work.
-            CardActivity.query.filter(
-                CardActivity.card_id == card_id).delete()
 
             db.session.delete(card)
             db.session.commit()
-
             socketio.emit(
                 SIOEvent.CARD_DELETE.value,
                 SIODTO.delete_event_scehma.dump(
@@ -318,7 +319,7 @@ class MemberService:
     Contains business logic for Member.
     """
 
-    def post(self, current_user: User, card_id: int, data: dict) -> typing.Tuple[CardMember, CardActivity]:
+    def post(self, current_user: User, card_id: int, data: dict) -> CardMember:
         """Assigns member to card.
 
         Args:
@@ -394,7 +395,7 @@ class MemberService:
             )
             # TODO: Implement send notification
 
-            return member_assignment, activity
+            return member_assignment
         raise Forbidden()
 
     def delete(self, current_user: User, card_id: int, card_member_id: int) -> CardActivity:
@@ -423,9 +424,10 @@ class MemberService:
                     CardMember.board_user_id == card_member_id
                 )
             ).first()
-
             if not card_member:
                 raise NotFound("Card member not exists.")
+
+            entity_id = card_member.id
 
             # Add activity to card
             activity = CardActivity(
@@ -452,7 +454,7 @@ class MemberService:
                 SIODTO.delete_event_scehma.dump({
                     "list_id": card.list_id,
                     "card_id": card.id,
-                    "entity_id": card_member_id,
+                    "entity_id": entity_id,
                 }),
                 namespace="/board",
                 to=f"board-{card.board_id}"

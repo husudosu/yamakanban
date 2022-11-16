@@ -76,7 +76,7 @@ class CardAssignMemberAPI(MethodView):
     decorators = [jwt_required()]
 
     def post(self, card_id: int):
-        assignment, activity = member_service.post(
+        assignment = member_service.post(
             current_user, card_id, CardDTO.member_schema.load(request.json))
 
         return CardDTO.member_schema.dump(assignment)
