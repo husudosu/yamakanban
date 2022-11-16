@@ -347,3 +347,9 @@ class SIOEventSchema(Schema):
     list_id = fields.Integer(required=True)
     card_id = fields.Integer(required=True)
     entity = fields.Dict(required=True)
+
+
+class SIODeleteEventSchema(Schema):
+    list_id = fields.Integer()
+    card_id = fields.Integer()
+    entity_id = fields.Integer(required=True)

@@ -1,299 +1,481 @@
-import json
 import typing
-from werkzeug.exceptions import Forbidden
+import json
+
+from werkzeug.exceptions import Forbidden, NotFound
 from marshmallow.exceptions import ValidationError
 import sqlalchemy as sqla
+from flask_sqlalchemy import Pagination
 
-from api.app import db
+from api.app import db, socketio
+
+from api.model.user import User
+from api.model.card import Card, CardActivity, CardComment, CardMember, CardDate
 from api.model import BoardPermission, CardActivityEvent
 from api.model.board import BoardAllowedUser
-
 from api.model.list import BoardList
-from api.model.card import (
-    Card, CardActivity, CardComment, CardDate, CardMember
-)
+
+from api.util.dto import SIODTO, CardDTO
+from api.socket import SIOEvent
 
 
-def get_card(card_id: int) -> Card:
-    """Gets card if user can access the board
-    Args:
-        card_id (int): Card ID:
-    Returns:
-        Card: Card ORM object.
+class CardService:
     """
-    card = Card.get_or_404(card_id)
-    return card
-
-
-def get_cards(board_list: BoardList) -> typing.List[Card]:
-    """Gets cards from board list
-
-    Args:
-        board_list (BoardList): Board list
-
-    Returns:
-        typing.List[Card]: List of cards
+    Contains business logic for Card.
     """
-    return board_list.cards
 
+    def get(self, current_user: User, id: int, args: dict) -> Card:
+        """Gets card if the user has permission.
 
-def post_card(current_member: BoardAllowedUser, board_list: BoardList, data: dict) -> Card:
-    """Creates a card.
+        Args:
+            current_user (User): Current logged in user
+            id (int): Card ID to get.
+            args (dict): Args got from query.
 
-    Args:
-        current_member (User): Current logged in board member
-        board_list (BoardList): Board list
+        Raises:
+            Forbidden: User not member of board.
 
-    Raises:
-        Forbidden: Don't have permission to create card
+        Returns:
+            Card: Card ORM object
+        """
+        # Check permission
+        card: Card = Card.get_or_404(id)
 
-    Returns:
-        Card: Card ORM object
-    """
-    if current_member.has_permission(BoardPermission.CARD_EDIT):
-        data.pop("list_id", None)
-        card = Card(
-            **data,
-            board_id=board_list.board_id,
-            list_id=board_list.id,
-        )
-        position_max = db.engine.execute(
-            f"SELECT MAX(position) FROM card WHERE list_id={board_list.id}"
-        ).fetchone()
-        if position_max[0] is not None:
-            card.position = position_max[0] + 1
+        # Only membership required for getting card info.
+        BoardAllowedUser.get_by_usr_or_403(card.board_id, current_user.id)
 
-        db.session.add(card)
-        db.session.commit()
-        db.session.refresh(card)
+        # Load card activities
+        card.activities = CardActivity.query.filter(
+            CardActivity.card_id == card.id
+        ).order_by(
+            sqla.desc(CardActivity.activity_on)
+        ).limit(args["activity_count"]).all()
 
         return card
-    raise Forbidden()
 
+    def get_activities(self, current_user: User, card_id: int, args: dict) -> Pagination:
+        """Gets card activities
 
-def patch_card(current_member: BoardAllowedUser, card: Card, data: dict) -> typing.Tuple[Card, typing.List[typing.List[CardActivity]]]:
-    """Updates a card
+        Args:
+            current_user (User): Current logged in user
+            card_id (int): Card ID to get.
+            args (dict): Query parameters got from ma schema.
 
-    Args:
-        current_member (BoardAllowedUser): Current logged in board member
-        card (Card): Card ORM object to update
-        data (dict): Update data
+        Returns:
+            Pagination: Flask sqlalchemy pagination object.
+        """
+        card: Card = Card.get_or_404(card_id)
+        # Only membership required for getting card activities.
+        BoardAllowedUser.get_by_usr_or_403(card.board_id, current_user.id)
 
-    Raises:
-        Forbidden: Don't have permission to update card
+        # Query and paginate
+        query = CardActivity.query.filter(CardActivity.card_id == card_id)
 
-    Returns:
-        Card: Updated card ORM object
-    """
-    activities = []
-    if (current_member.has_permission(BoardPermission.CARD_EDIT)):
-        for key, value in data.items():
-            if key == "list_id" and card.list_id != value:
-                # Get target list id
-                target_list: BoardList = BoardList.get_or_404(value)
+        # Checks type
+        if args["type"] == "comment":
+            query = query.filter(
+                CardActivity.event == CardActivityEvent.CARD_COMMENT.value)
 
-                if target_list.board_id != card.board_id:
-                    raise ValidationError(
-                        {"list_id": ["Cannot move card to other board!"]})
+        # Sortby
+        sortby = args.get("sort_by", "activity_on")
+        order = args.get("order", "desc")
 
-                activity = CardActivity(
-                    board_user_id=current_member.id,
-                    event=CardActivityEvent.CARD_MOVE_TO_LIST.value,
-                    entity_id=card.id,
-                    changes=json.dumps(
-                        {
-                            "from": {
-                                "id": card.list_id,
-                                "title": card.board_list.title
-                            },
-                            "to": {
-                                "id": value,
-                                "title": target_list.title
+        if not hasattr(CardActivity, sortby):
+            sortby = "activity_on"
+
+        if order == "asc":
+            query = query.order_by(sqla.asc(getattr(CardActivity, sortby)))
+        elif order == "desc":
+            query = query.order_by(sqla.desc(getattr(CardActivity, sortby)))
+
+        return query.paginate(args["page"], args["per_page"])
+
+    def post(self, current_user: User, list_id: int, data: dict) -> Card:
+        """Creates a card.
+
+        Args:
+            current_user (User): Current logged in user
+            list_id (int): Board list ID where we need the card.
+            data (dict): Card data as dict
+
+        Raises:
+            Forbidden: Don't have permission to create  cards
+
+        Returns:
+            Card: Card ORM object.
+        """
+        board_list: BoardList = BoardList.get_or_404(list_id)
+        current_member: BoardAllowedUser = BoardAllowedUser.get_by_usr_or_403(
+            board_list.board_id, current_user.id)
+
+        if current_member.has_permission(BoardPermission.CARD_EDIT):
+            data.pop("list_id", None)
+            data.pop("board_id", None)
+
+            card = Card(
+                **data,
+                board_id=board_list.board_id,
+                list_id=board_list.id
+            )
+            position_max = db.engine.execute(
+                f"SELECT MAX(position) FROM card WHERE list_id={board_list.id}"
+            ).fetchone()
+
+            if position_max[0] is not None:
+                card.position = position_max[0] + 1
+            db.session.add(card)
+            db.session.commit()
+
+            socketio.emit(
+                SIOEvent.CARD_NEW.value,
+                CardDTO.card_schema.dump(card),
+                namespace="/board",
+                to=f"board-{card.board_id}"
+            )
+
+            return card
+
+        raise Forbidden()
+
+    def patch(self, current_user: User, card_id: int, data: dict) -> Card:
+        """Updates card.
+
+        Args:
+            current_user (User): Current logged in user
+            card_id (int): Card ID to update
+            data (dict): Card update data
+
+        Raises:
+            ValidationError: _description_
+            Forbidden: _description_
+
+        Returns:
+            Card: Returns updated card.
+        """
+        activities = []
+        card: Card = Card.get_or_404(card_id)
+        old_list_id = card.list_id
+
+        current_member: BoardAllowedUser = BoardAllowedUser.get_by_usr_or_403(
+            card.board_id, current_user.id
+        )
+
+        if (current_member.has_permission(BoardPermission.CARD_EDIT)):
+            for key, value in data.items():
+                if key == "list_id" and card.list_id != value:
+                    # Get target list id
+                    target_list: BoardList = BoardList.get_or_404(value)
+
+                    if target_list.board_id != card.board_id:
+                        raise ValidationError(
+                            {"list_id": ["Cannot move card to other board!"]})
+
+                    activity = CardActivity(
+                        board_user_id=current_member.id,
+                        event=CardActivityEvent.CARD_MOVE_TO_LIST.value,
+                        entity_id=card.id,
+                        changes=json.dumps(
+                            {
+                                "from": {
+                                    "id": card.list_id,
+                                    "title": card.board_list.title
+                                },
+                                "to": {
+                                    "id": value,
+                                    "title": target_list.title
+                                }
                             }
-                        }
+                        )
                     )
+                    card.activities.append(activity)
+                    card.list_id = value
+                    activities.append(activity)
+                elif hasattr(card, key):
+                    setattr(card, key, value)
+
+            db.session.commit()
+            db.session.refresh(card)
+
+            # Send card activities
+            for activity in activities:
+                socketio.emit(
+                    SIOEvent.CARD_ACTIVITY.value,
+                    CardDTO.activity_schema.dump(activity),
+                    namespace="/board",
+                    to=f"card-{card.id}"
                 )
-                card.activities.append(activity)
-                card.list_id = value
-                activities.append(activity)
-            elif hasattr(card, key):
-                setattr(card, key, value)
 
-        db.session.commit()
-        db.session.refresh(card)
+            socketio.emit(
+                SIOEvent.CARD_UPDATE.value,
+                SIODTO.event_schema.dump({
+                    "list_id": old_list_id,
+                    "card_id": card.id,
+                    "entity": CardDTO.card_schema.dump(card)
+                }),
+                namespace="/board",
+                to=f"board-{card.board_id}"
+            )
+            return card
+        raise Forbidden()
 
-        return card, activities
-    raise Forbidden()
+    def delete(self, current_user: User, card_id: int):
+        """Deletes a card
+
+        Args:
+            current_user (User): Current logged in user.
+            card_id (int): Card ID to delete.
+
+        Raises:
+            Forbidden: Don't have permission to delete cards
+        """
+        card: Card = Card.get_or_404(card_id)
+        current_member = BoardAllowedUser.get_by_usr_or_403(
+            card.board_id, current_user.id)
+
+        if current_member.has_permission(BoardPermission.CARD_DELETE):
+            list_id = card.list_id
+            # We don't load activities by default so cascade delete won't  work.
+            CardActivity.query.filter(
+                CardActivity.card_id == card_id).delete()
+
+            db.session.delete(card)
+            db.session.commit()
+
+            socketio.emit(
+                SIOEvent.CARD_DELETE.value,
+                SIODTO.delete_event_scehma.dump(
+                    {
+                        "list_id": list_id,
+                        "card_id": card_id,
+                        "entity_id": card_id,
+                    }
+                ),
+                namespace="/board",
+                to=f"board-{card.board_id}"
+            )
+
+        else:
+            raise Forbidden()
 
 
-def post_card_comment(
-    current_member: BoardAllowedUser, card: Card, data: dict
-) -> CardActivity:
-    if (
-        current_member.has_permission(BoardPermission.CARD_COMMENT)
-    ):
-        comment = CardComment(
-            board_user_id=current_member.id,
-            board_id=card.board_id,
-            **data
-        )
-        activity = CardActivity(
-            board_user_id=current_member.id,
-            event=CardActivityEvent.CARD_COMMENT.value,
-            entity_id=comment.id,
-            comment=comment
-        )
-        card.activities.append(activity)
-        db.session.commit()
-        db.session.refresh(activity)
-        return activity
-    raise Forbidden()
+class CommentService:
+    """
+    Contains business logic for Card comment.
+    """
 
+    def post(self, current_user: User, card_id: int, data: dict) -> CardActivity:
+        """Creates a card comment
 
-def patch_card_comment(
-    current_member: BoardAllowedUser, comment: CardComment, data: dict
-) -> CardComment:
-    if (comment.board_user_id == current_member.id):
-        comment.update(**data)
-        comment.card.activities.append(
-            CardActivity(
+        Args:
+            current_user (User): Current logged in user
+            card_id (int): Card id to add comment.
+            data (dict): Comment data as dict
+
+        Raises:
+            Forbidden: Don't have permission to create comment.
+
+        Returns:
+            CardActivity: Card activity of comment
+        """
+        card: Card = Card.get_or_404(card_id)
+        current_member: BoardAllowedUser = BoardAllowedUser.get_by_usr_or_403(
+            card.board_id, current_user.id)
+
+        if current_member.has_permission(BoardPermission.CARD_COMMENT):
+            comment = CardComment(
+                board_user_id=current_member.id,
+                board_id=card.board_id,
+                **data
+            )
+            activity = CardActivity(
                 board_user_id=current_member.id,
                 event=CardActivityEvent.CARD_COMMENT.value,
-                entity_id=comment.id
+                entity_id=comment.id,
+                comment=comment
             )
-        )
-        db.session.commit()
-        db.session.refresh(comment)
-        return comment
-    raise Forbidden()
+            card.activities.append(activity)
+            db.session.commit()
+            db.session.refresh(activity)
 
+            socketio.emit(
+                SIOEvent.CARD_ACTIVITY.value,
+                CardDTO.activity_schema.dump(activity),
+                namespace="/board",
+                to=f"card-{card.id}"
+            )
 
-def delete_card_comment(
-    current_member: BoardAllowedUser, comment: CardComment
-):
-    if (current_member.id == comment.board_user_id):
-        comment.delete()
-        db.session.commit()
-    else:
+            return activity
         raise Forbidden()
 
+    def patch_comment(self, current_user: User, comment_id: int, data: dict) -> CardComment:
+        raise NotImplementedError()
 
-def delete_card(current_member: BoardAllowedUser, card: Card):
-    """Deletes a card.
-    Args:
-        current_member (BoardAllowedUser): Current logged in board member
-        card (Card): Card ORM object  to delete
+    def delete(self, comment_id: int):
+        raise NotImplementedError()
 
-    Raises:
-        Forbidden: Don't have permission to delete card
+
+class MemberService:
     """
-    if current_member.has_permission(BoardPermission.CARD_DELETE):
-        db.session.delete(card)
-        db.session.commit()
-    else:
+    Contains business logic for Member.
+    """
+
+    def post(self, current_user: User, card_id: int, data: dict) -> typing.Tuple[CardMember, CardActivity]:
+        """Assigns member to card.
+
+        Args:
+            current_user (User): Current logged in user
+            card_id (int): Card to assign member
+            data (dict): Member data as dict.
+
+        Raises:
+            ValidationError: Marshmallow validation error
+            Forbidden: Don't have permission to assign mebmer.
+
+        Returns:
+            typing.Tuple[CardMember, CardActivity]: _description_
+        """
+        card: Card = Card.get_or_404(card_id)
+        current_member: BoardAllowedUser = BoardAllowedUser.get_by_usr_or_403(
+            card.board_id, current_user.id)
+        if current_member.has_permission(BoardPermission.CARD_ASSIGN_MEMBER):
+            member = BoardAllowedUser.query.filter(
+                sqla.and_(
+                    BoardAllowedUser.board_id == card.board_id,
+                    BoardAllowedUser.id == data["board_user_id"]
+                )
+            ).first()
+            if not member:
+                raise ValidationError(
+                    {"board_user_id": ["Board user not exists."]}
+                )
+
+            # Check if member already assigned
+            if CardMember.query.filter(
+                sqla.and_(
+                    CardMember.card_id == card.id,
+                    CardMember.board_user_id == member.id
+                )
+            ).first():
+                raise ValidationError(
+                    {"board_user_id": ["Member already assigned to this card."]})
+
+            member_assignment = CardMember(board_user_id=member.id)
+            card.assigned_members.append(member_assignment)
+
+            # Add card activity
+            activity = CardActivity(
+                card_id=card.id,
+                board_user_id=current_member.id,
+                event=CardActivityEvent.CARD_ASSIGN_MEMBER,
+                entity_id=member.id,
+                changes=json.dumps(
+                    {"to": {"board_user_id": member_assignment.board_user_id}}
+                )
+            )
+            card.activities.append(activity)
+            db.session.commit()
+
+            # Send card activity
+            socketio.emit(
+                SIOEvent.CARD_ACTIVITY.value,
+                CardDTO.activity_schema.dump(activity),
+                namespace="/board",
+                to=f"card-{card.id}"
+            )
+            # Send member assigned
+            socketio.emit(
+                SIOEvent.CARD_MEMBER_ASSIGNED.value,
+                SIODTO.event_schema.dump({
+                    "list_id": card.list_id,
+                    "card_id": card.id,
+                    "entity": CardDTO.member_schema.dump(member_assignment)
+                }),
+                namespace="/board",
+                to=f"board-{card.board_id}"
+            )
+            # TODO: Implement send notification
+
+            return member_assignment, activity
+        raise Forbidden()
+
+    def delete(self, current_user: User, card_id: int, card_member_id: int) -> CardActivity:
+        """Deassigns card member.
+
+        Args:
+            current_user (User): Current logged in user.
+            card_id (int): Card ID.
+            card_member_id (int): Card Member ID
+
+        Raises:
+            Forbidden: Don't have permission to deassign member
+
+        Returns:
+            CardActivity: Card activity of deassignment.
+        """
+        card: Card = Card.get_or_404(card_id)
+        current_member = BoardAllowedUser.get_by_usr_or_403(
+            card.board_id, current_user.id)
+
+        if current_member.has_permission(BoardPermission.CARD_DEASSIGN_MEMBER):
+            # Get member
+            card_member = CardMember.query.filter(
+                sqla.and_(
+                    CardMember.card_id == card.id,
+                    CardMember.board_user_id == card_member_id
+                )
+            ).first()
+
+            if not card_member:
+                raise NotFound("Card member not exists.")
+
+            # Add activity to card
+            activity = CardActivity(
+                card_id=card.id,
+                board_user_id=current_member.id,
+                event=CardActivityEvent.CARD_DEASSIGN_MEMBER,
+                changes=json.dumps(
+                    {"from": {"board_user_id": card_member.board_user_id}}
+                )
+            )
+            card.activities.append(activity)
+            db.session.delete(card_member)
+            db.session.commit()
+
+            socketio.emit(
+                SIOEvent.CARD_ACTIVITY.value,
+                CardDTO.activity_schema.dump(activity),
+                namespace="/board",
+                to=f"card-{card.id}"
+            )
+            # Send member assigned
+            socketio.emit(
+                SIOEvent.CARD_MEMBER_DEASSIGNED.value,
+                SIODTO.delete_event_scehma.dump({
+                    "list_id": card.list_id,
+                    "card_id": card.id,
+                    "entity_id": card_member_id,
+                }),
+                namespace="/board",
+                to=f"board-{card.board_id}"
+            )
+            return activity
         raise Forbidden()
 
 
-def get_card_activities(card: Card, args: dict = {}):
-    # Query and paginate
-    query = CardActivity.query.filter(CardActivity.card_id == card.id)
-    # Checks type
-    if args["type"] == "comment":
-        query = query.filter(CardActivity.event ==
-                             CardActivityEvent.CARD_COMMENT.value)
+class DateService:
+    """
+    Contains business logic for card date.
+    """
 
-    # Sortby
-    sortby = args.get("sort_by", "activity_on")
-    order = args.get("order", "desc")
+    def post(self, current_user: User, card_id: int, data: dict) -> CardDate:
+        """Creates Date."""
+        card: Card = Card.get_or_404(card_id)
+        current_member: BoardAllowedUser = BoardAllowedUser.get_by_usr_or_403(
+            card.board_id, current_user.id)
 
-    if not hasattr(CardActivity, sortby):
-        sortby = "activity_on"
-
-    if order == "asc":
-        query = query.order_by(sqla.asc(getattr(CardActivity, sortby)))
-    elif order == "desc":
-        query = query.order_by(sqla.desc(getattr(CardActivity, sortby)))
-
-    return query.paginate(args["page"], args["per_page"])
-
-
-def assign_card_member(
-    current_member: BoardAllowedUser, card: Card,
-    data: dict
-) -> typing.Tuple[CardMember, CardActivity]:
-    if current_member.has_permission(BoardPermission.CARD_ASSIGN_MEMBER):
-        # Get member
-        member = BoardAllowedUser.query.filter(
-            BoardAllowedUser.id == data["board_user_id"]
-        ).first()
-
-        if not member:
-            raise ValidationError(
-                {"board_user_id": ["Board user not exists."]})
-
-        # Check if member already assigned
-        if CardMember.query.filter(
-            sqla.and_(
-                CardMember.card_id == card.id,
-                CardMember.board_user_id == member.id
-            )
-        ).first():
-            raise ValidationError(
-                {"board_user_id": ["Member already assigned to this card."]})
-
-        member_assignment = CardMember(board_user_id=member.id)
-        card.assigned_members.append(member_assignment)
-        # TODO: Implement send notification
-
-        # Add card activity
-        activity = CardActivity(
-            card_id=card.id,
-            board_user_id=current_member.id,
-            event=CardActivityEvent.CARD_ASSIGN_MEMBER,
-            entity_id=member.id,
-            changes=json.dumps(
-                {"to": {"board_user_id": member_assignment.board_user_id}}
-            )
-        )
-        card.activities.append(activity)
-        db.session.commit()
-        return member_assignment, activity
-    raise Forbidden()
-
-
-def deassign_card_member(
-    current_member: BoardAllowedUser, card_member: CardMember, card: Card
-) -> CardActivity:
-    if current_member.has_permission(BoardPermission.CARD_DEASSIGN_MEMBER):
-        # Get member
-
-        # Add activity to card
-        activity = CardActivity(
-            card_id=card.id,
-            board_user_id=current_member.id,
-            event=CardActivityEvent.CARD_DEASSIGN_MEMBER,
-            changes=json.dumps(
-                {"from": {"board_user_id": card_member.board_user_id}}
-            )
-        )
-        card.activities.append(activity)
-        db.session.delete(card_member)
-        db.session.commit()
-        return activity
-    else:
-        raise Forbidden()
-
-
-def post_card_date(
-    current_member: BoardAllowedUser, card: Card,
-    data: dict
-) -> CardDate:
-    # TODO: Convert timestamps into UTC, based on user time zone.
-    if current_member.has_permission(BoardPermission.CARD_ADD_DATE):
-        card_date = CardDate(board_id=card.board_id, **data)
-        card.dates.append(card_date)
-        card.activities.append(
-            CardActivity(
+        if current_member.has_permission(BoardPermission.CARD_ADD_DATE):
+            card_date = CardDate(board_id=card.board_id, **data)
+            card.dates.append(card_date)
+            activity = CardActivity(
                 board_user_id=current_member.id,
                 event=CardActivityEvent.CARD_ADD_DATE,
                 entity_id=card_date.id,
@@ -305,20 +487,50 @@ def post_card_date(
                     }
                 )
             )
-        )
-        db.session.commit()
-        return card_date
-    raise Forbidden()
+            card.activities.append(activity)
+            db.session.commit()
 
+            socketio.emit(
+                SIOEvent.CARD_ACTIVITY.value,
+                CardDTO.activity_schema.dump(activity),
+                namespace="/board",
+                to=f"card-{card.id}"
+            )
 
-def patch_card_date(
-    current_member: BoardAllowedUser, card_date: CardDate,
-    data: dict
-) -> CardDate:
-    if current_member.has_permission(BoardPermission.CARD_EDIT_DATE):
-        card_date.update(**data)
-        card_date.card.activities.append(
-            CardActivity(
+            socketio.emit(
+                SIOEvent.CARD_DATE_NEW.value,
+                SIODTO.event_schema.dump({
+                    "card_id": card.id,
+                    "list_id": card.list_id,
+                    "entity": CardDTO.date_schema.dump(card_date)
+                }),
+                namespace="/board",
+                to=f"board-{card.board_id}"
+            )
+            return card_date
+        raise Forbidden()
+
+    def patch(self, current_user: User, date_id: int, data: dict) -> CardDate:
+        """Updates date.
+
+        Args:
+            current_user (User): Current logged in user.
+            date_id (int): Card date id
+            data (dict): Update data as dict
+
+        Raises:
+            Forbidden: No permission to update Card Date
+
+        Returns:
+            typing.Tuple[CardDate, CardActivity]: _description_
+        """
+        card_date = CardDate.get_or_404(date_id)
+        current_member: BoardAllowedUser = BoardAllowedUser.get_by_usr_or_403(
+            card_date.board_id, current_user.id)
+
+        if current_member.has_permission(BoardPermission.CARD_EDIT_DATE):
+            card_date.update(**data)
+            activity = CardActivity(
                 board_user_id=current_member.id,
                 event=CardActivityEvent.CARD_EDIT_DATE,
                 entity_id=card_date.id,
@@ -330,22 +542,66 @@ def patch_card_date(
                     }
                 )
             )
-        )
-        db.session.commit()
-        return card_date
-    raise Forbidden()
+            card_date.card.activities.append(activity)
+            db.session.commit()
 
+            socketio.emit(
+                SIOEvent.CARD_DATE_UPDATE.value,
+                SIODTO.event_schema.dump(
+                    {
+                        "card_id": card_date.card_id,
+                        "list_id": card_date.card.list_id,
+                        "entity": CardDTO.date_schema.dump(card_date)
+                    }
+                ),
+                namespace="/board",
+                to=f"board-{card_date.board_id}"
+            )
 
-def delete_card_date(current_member: BoardAllowedUser, card_date: CardDate):
-    if current_member.has_permission(BoardPermission.CARD_EDIT_DATE):
-        card_date.card.activities.append(
-            CardActivity(
+            return card_date
+        raise Forbidden()
+
+    def delete(self, current_user: User, date_id: int) -> CardActivity:
+        """Delete card date.
+
+        Args:
+            current_user (User): Current logged in user.
+            date_id (int): Date id to delete
+
+        Raises:
+            Forbidden: No permission to delete card date
+
+        Returns:
+            CardActivity: _description_
+        """
+        card_date = CardDate.get_or_404(date_id)
+        current_member: BoardAllowedUser = BoardAllowedUser.get_by_usr_or_403(
+            card_date.board_id, current_user.id)
+
+        if current_member.has_permission(BoardPermission.CARD_EDIT_DATE):
+            activity = CardActivity(
                 board_user_id=current_member.id,
                 event=CardActivityEvent.CARD_DELETE_DATE,
                 entity_id=card_date.id,
             )
-        )
-        db.session.delete(card_date)
-        db.session.commit()
-    else:
-        raise Forbidden()
+            # Dump event before deletion
+            sio_event = SIODTO.delete_event_scehma.dump(
+                {
+                    "card_id": card_date.card_id,
+                    "list_id": card_date.card.list_id,
+                    "entity_id": card_date.id
+                }
+            )
+
+            card_date.card.activities.append(activity)
+            db.session.delete(card_date)
+            db.session.commit()
+
+            socketio.emit(
+                SIOEvent.CARD_DATE_DELETE.value,
+                sio_event,
+                namespace="/board",
+                to=f"board-{card_date.board_id}"
+            )
+        else:
+            raise Forbidden()
