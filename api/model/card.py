@@ -11,7 +11,7 @@ class CardActivity(db.Model, BaseMixin):
     __tablename__ = "card_activity"
     id = sqla.Column(sqla.Integer, primary_key=True)
     card_id = sqla.Column(
-        sqla.Integer, sqla.ForeignKey("card.id"), nullable=False)
+        sqla.Integer, sqla.ForeignKey("card.id", ondelete="CASCADE"), nullable=False)
     board_user_id = sqla.Column(
         sqla.Integer, sqla.ForeignKey("board_allowed_user.id"), nullable=False)
     activity_on = sqla.Column(
@@ -41,7 +41,7 @@ class CardMember(db.Model, BaseMixin):
     id = sqla.Column(sqla.Integer, primary_key=True)
 
     card_id = sqla.Column(
-        sqla.ForeignKey("card.id"), nullable=False)
+        sqla.ForeignKey("card.id", ondelete="CASCADE"), nullable=False)
     board_user_id = sqla.Column(sqla.ForeignKey(
         "board_allowed_user.id"), nullable=False)
 
@@ -56,7 +56,7 @@ class CardComment(db.Model, BaseMixin):
     board_user_id = sqla.Column(sqla.ForeignKey(
         "board_allowed_user.id"), nullable=False)
     activity_id = sqla.Column(
-        sqla.Integer, sqla.ForeignKey("card_activity.id"))
+        sqla.Integer, sqla.ForeignKey("card_activity.id", ondelete="CASCADE"))
     board_id = sqla.Column(
         sqla.Integer, sqla.ForeignKey("board.id"), nullable=False
     )
@@ -81,7 +81,8 @@ class CardDate(db.Model, BaseMixin):
     __tablename__ = "card_date"
 
     id = sqla.Column(sqla.Integer, primary_key=True)
-    card_id = sqla.Column(sqla.Integer, sqla.ForeignKey("card.id"))
+    card_id = sqla.Column(sqla.Integer, sqla.ForeignKey(
+        "card.id", ondelete="CASCADE"))
     board_id = sqla.Column(sqla.Integer, sqla.ForeignKey("board.id"))
 
     dt_from = sqla.Column(sqla.DateTime)
@@ -101,7 +102,7 @@ class Card(db.Model, BaseMixin):
 
     id = sqla.Column(sqla.Integer, primary_key=True)
     list_id = sqla.Column(
-        sqla.Integer, sqla.ForeignKey("list.id"), nullable=False)
+        sqla.Integer, sqla.ForeignKey("list.id", ondelete="CASCADE"), nullable=False)
     board_id = sqla.Column(
         sqla.Integer, sqla.ForeignKey("board.id"), nullable=False
     )

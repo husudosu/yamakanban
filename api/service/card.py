@@ -228,11 +228,7 @@ class CardService:
         Raises:
             Forbidden: Don't have permission to delete cards
         """
-        card: Card = Card.query.filter(Card.id == card_id).options(
-            sqla_orm.joinedload(Card.activities)).first()
-        if not card:
-            raise NotFound("Card not found.")
-
+        card: Card = Card.get_or_404(card_id)
         current_member = BoardAllowedUser.get_by_usr_or_403(
             card.board_id, current_user.id)
 

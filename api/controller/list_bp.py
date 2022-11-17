@@ -3,6 +3,7 @@ from werkzeug.exceptions import Forbidden
 from flask import jsonify, request, Blueprint
 from flask.views import MethodView
 from flask_jwt_extended import current_user, jwt_required
+import sqlalchemy.orm as sqla_orm
 
 from api.app import socketio
 from api.model.board import Board, BoardAllowedUser
