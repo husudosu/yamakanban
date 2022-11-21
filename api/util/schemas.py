@@ -247,6 +247,20 @@ class CardActivityQuerySchema(PaginatedQuerySchema):
     type = fields.String(
         validate=validate.OneOf(["all", "comment"]), missing="comment")
 
+    dt_from = fields.Date()
+    dt_to = fields.Date()
+    board_user_id = fields.Integer()
+
+    @validates_schema
+    def validate_schema(self, data, **kwargs):
+        errors = {}
+        if data["dt_from"] and data["dt_from"] > data["dt_to"]:
+            errors["dt_to"] = ["Can't be less than dt_from!"]
+            errors["dt_from"] = ["Can't be greater than dt_to!"]
+
+        if len(errors.keys()) > 0:
+            raise ValidationError(errors)
+
 
 class ChecklistItemSchema(SQLAlchemySchema):
     id = fields.Integer(dump_only=True)

@@ -18,7 +18,7 @@ from flask_jwt_extended import (
 from jwt import ExpiredSignatureError
 from flask_mail import Mail
 from flask_compress import Compress
-from flask_socketio import SocketIO, disconnect
+from flask_socketio import SocketIO
 
 from marshmallow.exceptions import ValidationError
 

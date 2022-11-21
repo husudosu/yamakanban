@@ -1,10 +1,8 @@
-import typing
 import json
 
 from werkzeug.exceptions import Forbidden, NotFound
 from marshmallow.exceptions import ValidationError
 import sqlalchemy as sqla
-import sqlalchemy.orm as sqla_orm
 from flask_sqlalchemy import Pagination
 
 from api.app import db, socketio
@@ -76,6 +74,8 @@ class CardService:
             query = query.filter(
                 CardActivity.event == CardActivityEvent.CARD_COMMENT.value)
 
+        # Get between two dates
+        # TODO: Continue here
         # Sortby
         sortby = args.get("sort_by", "activity_on")
         order = args.get("order", "desc")

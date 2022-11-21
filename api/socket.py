@@ -20,6 +20,14 @@ class SIOEvent(enum.Enum):
     CARD_DATE_UPDATE = "card.date.update"
     CARD_DATE_DELETE = "card.data.delete"
 
+    CARD_CHECKLIST_NEW = "card.checklist.new"
+    CARD_CHECKLIST_UPDATE = "card.checklist.update"
+    CARD_CHECKLIST_DELETE = "card.checklist.delete"
+
+    CHECKLIST_ITEM_NEW = "checklist.item.new"
+    CHECKLIST_ITEM_UPDATE = "checklist.item.update"
+    CHECKLIST_ITEM_DELETE = "checklist.item.delete"
+
     CARD_ACTIVITY = "card.activity"
 
     LIST_NEW = "list.new"
