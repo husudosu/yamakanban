@@ -13,6 +13,8 @@ from api.model import BoardPermission, CardActivityEvent
 from api.model.board import BoardAllowedUser
 from api.model.card import CardActivity, Card
 from api.model.checklist import CardChecklist, ChecklistItem
+from api.util.dto import ChecklistDTO, SIODTO, CardDTO
+from api.socket import SIOEvent
 
 
 class ChecklistService:
@@ -35,20 +37,38 @@ class ChecklistService:
             )
 
             # Card activity
-            card.activities.append(
-                CardActivity(
-                    board_user_id=current_member.id,
-                    event=CardActivityEvent.CHECKLIST_CREATE.value,
-                    entity_id=card.id,
-                    changes=json.dumps({
-                        "to": {
-                            "title": checklist.title
-                        }
-                    })
-                )
+            activity = CardActivity(
+                board_user_id=current_member.id,
+                event=CardActivityEvent.CHECKLIST_CREATE.value,
+                entity_id=card.id,
+                changes=json.dumps({
+                    "to": {
+                        "title": checklist.title
+                    }
+                })
             )
+            card.activities.append(activity)
             db.session.add(checklist)
             db.session.commit()
+
+            socketio.emit(
+                SIOEvent.CARD_CHECKLIST_NEW.value,
+                SIODTO.event_schema.dump({
+                    "card_id": checklist.card_id,
+                    "list_id": checklist.card.list_id,
+                    "entity": ChecklistDTO.checklist_schema.dump(checklist)
+                }),
+                namespace="/board",
+                to=f"board-{checklist.board_id}"
+            )
+
+            socketio.emit(
+                SIOEvent.CARD_ACTIVITY.value,
+                CardDTO.activity_schema.dump(activity),
+                namespace="/board",
+                to=f"card-{checklist.card_id}"
+            )
+
             return checklist
         raise Forbidden()
 
@@ -62,7 +82,19 @@ class ChecklistService:
             checklist.update(**data)
             db.session.commit()
             db.session.refresh(checklist)
+
+            socketio.emit(
+                SIOEvent.CARD_CHECKLIST_UPDATE.value,
+                SIODTO.event_schema.dump({
+                    "card_id": checklist.card_id,
+                    "list_id": checklist.card.list_id,
+                    "entity": ChecklistDTO.checklist_schema.dump(checklist)
+                }),
+                namespace="/board",
+                to=f"board-{checklist.board_id}"
+            )
             return checklist
+
         raise Forbidden()
 
     def delete(self, current_user: User, checklist_id: int):
@@ -72,14 +104,35 @@ class ChecklistService:
             checklist.board_id, current_user.id)
 
         if (current_member.has_permission(BoardPermission.CHECKLIST_EDIT)):
+            sio_event = SIODTO.delete_event_scehma.dump({
+                "card_id": checklist.card_id,
+                "list_id": checklist.card.list_id,
+                "entity_id": checklist.id
+            })
+
             db.session.delete(checklist)
-            checklist.card.activities.append(
-                CardActivity(
-                    board_user_id=current_member.id,
-                    event=CardActivityEvent.CHECKLIST_DELETE.value
-                )
+
+            activity = CardActivity(
+                board_user_id=current_member.id,
+                event=CardActivityEvent.CHECKLIST_DELETE.value
             )
+
+            checklist.card.activities.append(activity)
             db.session.commit()
+
+            socketio.emit(
+                SIOEvent.CARD_CHECKLIST_DELETE.value,
+                sio_event,
+                namespace="/board",
+                to=f"board-{checklist.board_id}"
+            )
+
+            socketio.emit(
+                SIOEvent.CARD_ACTIVITY.value,
+                CardDTO.activity_schema.dump(activity),
+                namespace="/board",
+                to=f"card-{checklist.card_id}"
+            )
         else:
             raise Forbidden()
 
@@ -130,8 +183,20 @@ class ChecklistItemService:
 
             checklist.items.append(item)
             # TODO Send Email notification for assigned user
+            # TODO: Create activity objects.
             db.session.commit()
             db.session.refresh(item)
+
+            socketio.emit(
+                SIOEvent.CHECKLIST_ITEM_NEW.value,
+                SIODTO.event_schema.dump({
+                    "card_id": checklist.card_id,
+                    "list_id": checklist.card.list_id,
+                    "entity": ChecklistDTO.checklist_item_schema.dump(item)
+                }),
+                namespace="/board",
+                to=f"board-{checklist.board_id}"
+            )
             return item
         raise Forbidden()
 
@@ -147,6 +212,7 @@ class ChecklistItemService:
             item (ChecklistItem): Checklist item to process
             data (dict): Data got from request
         """
+        activities = []
         if (
             data.get("completed") is not None and
             data["completed"] != item.completed
@@ -209,6 +275,7 @@ class ChecklistItemService:
                     }
                 )
             )
+            item.checklist.card.activities.append(activity)
 
     def patch(self, current_user: User, item_id: int, data: dict) -> ChecklistItem:
         """Updates ChecklistItem."""
