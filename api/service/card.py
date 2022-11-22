@@ -603,3 +603,9 @@ class DateService:
             )
         else:
             raise Forbidden()
+
+
+card_service = CardService()
+comment_service = CommentService()
+member_service = MemberService()
+date_service = DateService()

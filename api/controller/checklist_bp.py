@@ -4,121 +4,74 @@ from flask import request, Blueprint
 from flask.views import MethodView
 from flask_jwt_extended import current_user, jwt_required
 
-from api.model.board import BoardAllowedUser
-from api.model.card import Card
-from api.model.checklist import CardChecklist, ChecklistItem
-import api.service.checklist as checklist_service
-from api.util.schemas import CardChecklistSchema, ChecklistItemSchema
+from api.util.dto import ChecklistDTO
+from api.service.checklist import checklist_service, checklist_item_service
 
 checklist_bp = Blueprint("checklist_bp", __name__)
-
-checklist_schema = CardChecklistSchema()
-checklist_new_schema = CardChecklistSchema(only=("title",))
-checklist_item_schema = ChecklistItemSchema()
 
 
 class ChecklistAPI(MethodView):
     decorators = [jwt_required()]
 
     def post(self, card_id: int):
-        card: Card = Card.get_or_404(card_id)
-        current_member = BoardAllowedUser.get_by_user_id(
-            card.board_id, current_user.id)
-        if not current_member:
-            raise Forbidden()
-
-        checklist = checklist_service.post_card_checklist(
-            current_member,
-            card,
-            checklist_schema.load(request.json)
+        return ChecklistDTO.checklist_schema.dump(
+            checklist_service.post(
+                current_user,
+                card_id,
+                ChecklistDTO.checklist_new_schema.load(request.json)
+            )
         )
-        return checklist_schema.dump(checklist)
 
     def patch(self, checklist_id: int):
-        checklist: CardChecklist = CardChecklist.get_or_404(checklist_id)
-        current_member = BoardAllowedUser.get_by_user_id(
-            checklist.board_id, current_user.id)
-        if not current_member:
-            raise Forbidden()
-
-        checklist = checklist_service.patch_card_checklist(
-            current_member,
-            checklist,
-            checklist_schema.load(request.json)
+        return ChecklistDTO.checklist_schema.dump(
+            checklist_service.patch(
+                current_user,
+                checklist_id,
+                ChecklistDTO.checklist_schema.load(request.json)
+            )
         )
-        return checklist_schema.dump(checklist)
 
     def delete(self, checklist_id: int):
-        checklist: CardChecklist = CardChecklist.get_or_404(checklist_id)
-        current_member = BoardAllowedUser.get_by_user_id(
-            checklist.board_id, current_user.id)
-        if not current_member:
-            raise Forbidden()
-        checklist_service.delete_card_checklist(
-            current_member,
-            checklist
-        )
-        return {}
+        checklist_service.delete(current_user, checklist_id)
+        return {"message": "Checklist deleted."}
 
 
 class ChecklistItemAPI(MethodView):
     decorators = [jwt_required()]
 
     def post(self, checklist_id: int):
-        checklist: CardChecklist = CardChecklist.get_or_404(checklist_id)
-        current_member = BoardAllowedUser.get_by_user_id(
-            checklist.board_id, current_user.id)
-        if not current_member:
-            raise Forbidden()
-
-        item = checklist_service.post_checklist_item(
-            current_member,
-            checklist,
-            checklist_item_schema.load(request.json),
+        return ChecklistDTO.checklist_item_schema.dump(
+            checklist_item_service.post(
+                current_user,
+                checklist_id,
+                ChecklistDTO.checklist_item_schema.load(request.json)
+            )
         )
-        return checklist_item_schema.dump(item)
 
     def patch(self, item_id: int):
-        item: ChecklistItem = ChecklistItem.get_or_404(item_id)
-        current_member = BoardAllowedUser.get_by_user_id(
-            item.board_id, current_user.id)
-        if not current_member:
-            raise Forbidden()
-
-        item = checklist_service.patch_checklist_item(
-            current_member,
-            item,
-            checklist_item_schema.load(request.json, partial=True)
+        return ChecklistDTO.checklist_item_schema.dump(
+            checklist_item_service.patch(
+                current_user,
+                item_id,
+                ChecklistDTO.checklist_item_schema.load(
+                    request.json, partial=True)
+            )
         )
-        return checklist_item_schema.dump(item)
 
     def delete(self, item_id: int):
-        item: ChecklistItem = ChecklistItem.get_or_404(item_id)
-        current_member = BoardAllowedUser.get_by_user_id(
-            item.board_id, current_user.id)
-        if not current_member:
-            raise Forbidden()
-
-        checklist_service.delete_checklist_item(current_member, item)
-        return {}
+        checklist_item_service.delete(
+            current_user,
+            item_id
+        )
+        return {"message": "Checklist item deleted."}
 
 
 class ChecklistItemOrderAPI(MethodView):
     decorators = [jwt_required()]
 
     def patch(self, checklist_id: int):
-        checklist: CardChecklist = CardChecklist.get_or_404(checklist_id)
-        current_member = BoardAllowedUser.get_by_user_id(
-            checklist.board_id, current_user.id)
-        if not current_member:
-            raise Forbidden()
-
-        checklist_service.update_items_position(
-            current_member,
-            CardChecklist.get_or_404(checklist_id),
-            request.json
-        )
-
+        checklist_item_service.update_items_position(
+            current_user, checklist_id, request.json)
         return {}
 
 

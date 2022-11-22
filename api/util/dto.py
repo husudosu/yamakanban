@@ -14,6 +14,12 @@ class CardDTO:
     query_schema = schemas.CardQuerySchema()
 
 
+class ChecklistDTO:
+    checklist_schema = schemas.CardChecklistSchema()
+    checklist_new_schema = schemas.CardChecklistSchema(only=("title",))
+    checklist_item_schema = schemas.ChecklistItemSchema()
+
+
 class SIODTO:
     event_schema = schemas.SIOEventSchema()
     delete_event_scehma = schemas.SIODeleteEventSchema()

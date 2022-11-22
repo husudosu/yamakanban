@@ -3,15 +3,12 @@ from flask.views import MethodView
 from flask_jwt_extended import current_user, jwt_required
 from webargs.flaskparser import use_args
 
-from api.service import card
+from api.service.card import (
+    card_service, comment_service, member_service, date_service
+)
 from api.util.dto import CardDTO
 
 card_bp = Blueprint("card_bp", __name__)
-
-card_service = card.CardService()
-comment_service = card.CommentService()
-member_service = card.MemberService()
-date_service = card.DateService()
 
 
 class CardAPI(MethodView):
