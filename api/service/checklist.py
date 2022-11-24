@@ -203,7 +203,7 @@ class ChecklistItemService:
     def checklist_item_process_changes(
         self,
         current_member: BoardAllowedUser, item: ChecklistItem, data: dict
-    ):
+    ) -> typing.List[CardActivity]:
         """Processes data changes of checklist item, creates card activities
         based on data changes.
 
@@ -232,6 +232,7 @@ class ChecklistItemService:
                 )
             )
             item.checklist.card.activities.append(activity)
+            activities.append(activity)
             # Update details
             if data["completed"]:
                 item.marked_complete_board_user_id = current_member.id
@@ -256,6 +257,7 @@ class ChecklistItemService:
                 )
             )
             item.checklist.card.activities.append(activity)
+            activities.append(activity)
         if (
             data.get("due_date") is not None and
             data["due_date"] != item.due_date
@@ -276,6 +278,8 @@ class ChecklistItemService:
                 )
             )
             item.checklist.card.activities.append(activity)
+            activities.append(activity)
+        return activities
 
     def patch(self, current_user: User, item_id: int, data: dict) -> ChecklistItem:
         """Updates ChecklistItem."""
@@ -294,23 +298,60 @@ class ChecklistItemService:
             if data.get("assigned_board_user_id"):
                 BoardAllowedUser.get_or_404(data["assigned_board_user_id"])
 
-            self.checklist_item_process_changes(current_member, item, data)
+            activities = self.checklist_item_process_changes(
+                current_member, item, data)
 
             item.update(**data)
 
             db.session.commit()
             db.session.refresh(item)
 
+            socketio.emit(
+                SIOEvent.CHECKLIST_ITEM_UPDATE.value,
+                SIODTO.event_schema.dump({
+                    "card_id": item.checklist.card_id,
+                    "list_id": item.checklist.card.list_id,
+                    "entity": ChecklistDTO.checklist_item_schema.dump(item)
+                }),
+                namespace="/board",
+                to=f"board-{item.checklist.board_id}"
+            )
+            for activity in activities:
+                socketio.emit(
+                    SIOEvent.CARD_ACTIVITY.value,
+                    CardDTO.activity_schema.dump(activity),
+                    namespace="/board",
+                    to=f"card-{item.checklist.card_id}"
+                )
+
             return item
         elif current_member.has_permission(BoardPermission.CHECKLIST_ITEM_MARK):
             # Only allow marking for member
             # TODO: raise forbidden if there's other fields on data
-            self.checklist_item_process_changes(current_member, item, data)
+            activities = self.checklist_item_process_changes(
+                current_member, item, data)
             item.update(completed=data["completed"])
 
             db.session.commit()
             db.session.refresh(item)
 
+            socketio.emit(
+                SIOEvent.CHECKLIST_ITEM_UPDATE.value,
+                SIODTO.event_schema.dump({
+                    "card_id": item.checklist.card_id,
+                    "list_id": item.checklist.card.list_id,
+                    "entity": ChecklistDTO.checklist_item_schema.dump(item)
+                }),
+                namespace="/board",
+                to=f"board-{item.checklist.board_id}"
+            )
+            for activity in activities:
+                socketio.emit(
+                    SIOEvent.CHECKLIST_ITEM_UPDATE.value,
+                    CardDTO.activity_schema.dump(activity),
+                    namespace="/board",
+                    to=f"card-{item.checklist.card_id}"
+                )
             return item
         raise Forbidden()
 
@@ -321,8 +362,21 @@ class ChecklistItemService:
             item.board_id, current_user.id)
 
         if current_member.has_permission(BoardPermission.CHECKLIST_EDIT):
+            sio_event = SIODTO.delete_checklist_event_schema.dump({
+                "checklist_id": item.checklist_id,
+                "list_id": item.checklist.card.list_id,
+                "card_id": item.checklist.card_id,
+                "entity_id": item.id
+            })
             db.session.delete(item)
             db.session.commit()
+
+            socketio.emit(
+                SIOEvent.CHECKLIST_ITEM_DELETE.value,
+                sio_event,
+                namespace="/board",
+                to=f"board-{item.checklist.board_id}"
+            )
         else:
             raise Forbidden()
 

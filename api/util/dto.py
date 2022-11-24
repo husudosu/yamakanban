@@ -23,3 +23,5 @@ class ChecklistDTO:
 class SIODTO:
     event_schema = schemas.SIOEventSchema()
     delete_event_scehma = schemas.SIODeleteEventSchema()
+    checklist_event_schema = schemas.SIOCheckListEventSchema()
+    delete_checklist_event_schema = schemas.SIOChecklistItemDeleteSchema()

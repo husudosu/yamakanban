@@ -367,3 +367,11 @@ class SIODeleteEventSchema(Schema):
     list_id = fields.Integer()
     card_id = fields.Integer()
     entity_id = fields.Integer(required=True)
+
+
+class SIOChecklistItemDeleteSchema(SIODeleteEventSchema):
+    checklist_id = fields.Integer()
+
+
+class SIOCheckListEventSchema(SIOEventSchema):
+    checklist_id = fields.Integer()
