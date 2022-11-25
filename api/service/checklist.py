@@ -400,6 +400,14 @@ class ChecklistItemService:
                 ).update({"position": index})
                 db.session.commit()
 
+            socketio.emit(
+                SIOEvent.CHECKLIST_ITEM_UPDATE_ORDER.value,
+                {"order": data, "card_id": checklist.card_id,
+                    "checklist_id": checklist.id},
+                namespace="/board",
+                to=f"card-{checklist.card_id}"
+            )
+
 
 checklist_service = ChecklistService()
 checklist_item_service = ChecklistItemService()

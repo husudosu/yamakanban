@@ -63,10 +63,13 @@ class CardCommentAPI(MethodView):
         ))
 
     def patch(self, comment_id: int):
-        raise NotImplementedError()
+        return CardDTO.comment_schema.dump(comment_service.patch(
+            current_user, comment_id, CardDTO.comment_schema.load(request.json)
+        ))
 
     def delete(self, comment_id: int):
-        raise NotImplementedError()
+        comment_service.delete(current_user, comment_id)
+        return {"message": "Comment deleted."}
 
 
 class CardAssignMemberAPI(MethodView):

@@ -1,5 +1,4 @@
 import json
-
 from werkzeug.exceptions import Forbidden, NotFound
 from marshmallow.exceptions import ValidationError
 import sqlalchemy as sqla
@@ -303,11 +302,44 @@ class CommentService:
             return activity
         raise Forbidden()
 
-    def patch_comment(self, current_user: User, comment_id: int, data: dict) -> CardComment:
-        raise NotImplementedError()
+    def patch(self, current_user: User, comment_id: int, data: dict) -> CardComment:
+        comment: CardComment = CardComment.get_or_404(comment_id)
+        current_member: BoardAllowedUser = BoardAllowedUser.get_by_usr_or_403(
+            comment.board_id, current_user.id
+        )
 
-    def delete(self, comment_id: int):
-        raise NotImplementedError()
+        if comment.board_user_id == current_member.id or current_member.role.is_admin:
+            comment.update(**data)
+            db.session.commit()
+
+            socketio.emit(
+                SIOEvent.CARD_ACTIVITY_UPDATE.value,
+                CardDTO.activity_schema.dump(comment.activity),
+                namespace="/board",
+                to=f"card-{comment.activity.card_id}"
+            )
+            return comment
+        raise Forbidden()
+
+    def delete(self, current_user: User, comment_id: int):
+        comment: CardComment = CardComment.get_or_404(comment_id)
+        current_member: BoardAllowedUser = BoardAllowedUser.get_by_usr_or_403(
+            comment.board_id, current_user.id
+        )
+
+        if comment.board_user_id == current_member.id or current_member.role.is_admin:
+            activity_id, card_id = comment.activity_id, comment.activity.card_id
+            db.session.delete(comment.activity)
+            db.session.commit()
+
+            socketio.emit(
+                SIOEvent.CARD_ACTIVITY_DELETE.value,
+                activity_id,
+                namespace="/board",
+                to=f"card-{card_id}"
+            )
+        else:
+            raise Forbidden()
 
 
 class MemberService:

@@ -28,7 +28,12 @@ class SIOEvent(enum.Enum):
     CHECKLIST_ITEM_UPDATE = "checklist.item.update"
     CHECKLIST_ITEM_DELETE = "checklist.item.delete"
 
+    CHECKLIST_ITEM_UPDATE_ORDER = "checklist.item.update.order"
+
     CARD_ACTIVITY = "card.activity"
+    # These two currently used for only card comments
+    CARD_ACTIVITY_UPDATE = "card.activity.update"
+    CARD_ACTIVITY_DELETE = "card.activity.delete"
 
     LIST_NEW = "list.new"
     LIST_UPDATE_ORDER = "list.update.order"

@@ -72,7 +72,7 @@ class CardComment(db.Model, BaseMixin):
     board = sqla_orm.relationship("Board")
 
     def update(self, **kwargs):
-        self.update(**kwargs)
+        super().update(**kwargs)
         self.updated = datetime.utcnow()
 
 
