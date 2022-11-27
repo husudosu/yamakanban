@@ -247,14 +247,14 @@ class CardActivityQuerySchema(PaginatedQuerySchema):
     type = fields.String(
         validate=validate.OneOf(["all", "comment"]), missing="comment")
 
-    dt_from = fields.Date()
-    dt_to = fields.Date()
+    dt_from = fields.DateTime("%Y-%m-%d %H:%M:%S")
+    dt_to = fields.DateTime("%Y-%m-%d %H:%M:%S")
     board_user_id = fields.Integer()
 
     @validates_schema
     def validate_schema(self, data, **kwargs):
         errors = {}
-        if data["dt_from"] and data["dt_from"] > data["dt_to"]:
+        if "dt_from" in data.keys() and "dt_to" in data.keys() and data["dt_from"] > data["dt_to"]:
             errors["dt_to"] = ["Can't be less than dt_from!"]
             errors["dt_from"] = ["Can't be greater than dt_to!"]
 

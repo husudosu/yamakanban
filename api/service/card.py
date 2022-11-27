@@ -61,6 +61,7 @@ class CardService:
         Returns:
             Pagination: Flask sqlalchemy pagination object.
         """
+        print(args)
         card: Card = Card.get_or_404(card_id)
         # Only membership required for getting card activities.
         BoardAllowedUser.get_by_usr_or_403(card.board_id, current_user.id)
@@ -74,7 +75,28 @@ class CardService:
                 CardActivity.event == CardActivityEvent.CARD_COMMENT.value)
 
         # Get between two dates
-        # TODO: Continue here
+        if "dt_from" in args.keys() and "dt_to" in args.keys():
+            query = query.filter(
+                CardActivity.activity_on.between(
+                    args["dt_from"],
+                    args["dt_to"]
+                )
+            )
+        elif "dt_from" in args.keys():
+            query = query.filter(
+                CardActivity.activity_on >= args["dt_from"]
+            )
+        elif "dt_to" in args.keys():
+            query = query.filter(
+                CardActivity.activity_on < args["dt_to"]
+            )
+
+        # Filter by user id
+        if "board_user_id" in args.keys():
+            query = query.filter(
+                CardActivity.board_user_id == args["board_user_id"]
+            )
+
         # Sortby
         sortby = args.get("sort_by", "activity_on")
         order = args.get("order", "desc")
@@ -204,12 +226,16 @@ class CardService:
                     to=f"card-{card.id}"
                 )
 
+            # Don't send activities on card update.
+            # FIXME: Dumping needs better solution here.
+            dmp = CardDTO.card_schema.dump(card)
+            dmp.pop("activities", None)
             socketio.emit(
                 SIOEvent.CARD_UPDATE.value,
                 SIODTO.event_schema.dump({
                     "list_id": old_list_id,
                     "card_id": card.id,
-                    "entity": CardDTO.card_schema.dump(card)
+                    "entity": dmp
                 }),
                 namespace="/board",
                 to=f"board-{card.board_id}"
