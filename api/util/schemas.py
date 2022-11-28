@@ -307,8 +307,9 @@ class CardDateSchema(SQLAlchemySchema):
     card_id = fields.Integer(dump_only=True)
     board_id = fields.Integer(dump_only=True)
 
-    dt_from = fields.DateTime(required=False, allow_none=True)
-    dt_to = fields.DateTime(required=True)
+    dt_from = fields.DateTime(
+        "%Y-%m-%d %H:%M:%S", required=False, allow_none=True)
+    dt_to = fields.DateTime("%Y-%m-%d %H:%M:%S", required=True)
 
     description = fields.String(allow_none=True)
     complete = fields.Boolean(allow_none=False, missing=False)

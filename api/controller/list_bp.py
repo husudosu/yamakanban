@@ -17,6 +17,7 @@ import api.service.list as list_service
 list_bp = Blueprint("list_bp", __name__)
 
 board_lists_schema = BoardListSchema()
+update_board_list_schema = BoardListSchema(exclude=("cards",))
 
 
 class ListAPI(MethodView):
@@ -64,10 +65,10 @@ class ListAPI(MethodView):
         updated_list = list_service.patch_board_list(
             current_member,
             board_list,
-            board_lists_schema.load(request.json, partial=True)
+            update_board_list_schema.load(request.json, partial=True)
         )
 
-        dmp = board_lists_schema.dump(updated_list)
+        dmp = update_board_list_schema.dump(updated_list)
         socketio.emit(
             SIOEvent.LIST_UPDATE.value,
             dmp,
