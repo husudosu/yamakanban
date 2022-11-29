@@ -42,7 +42,6 @@ class BoardPermission(enum.Enum):
     LIST_DELETE = "list.delete"
 
     BOARD_UPDATE = "board.update"
-    BOARD_DELETE = "board.delete"
 
     CHECKLIST_CREATE = "checklist.create"
     CHECKLIST_EDIT = "checklist.edit"

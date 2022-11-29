@@ -3,6 +3,8 @@ from api.util import schemas
 
 class CardDTO:
     card_schema = schemas.CardSchema()
+    update_card_schema = schemas.CardSchema(exclude=("activities",))
+
     comment_schema = schemas.CardCommentSchema()
 
     activity_schema = schemas.CardActivitySchema()

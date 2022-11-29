@@ -226,10 +226,7 @@ class CardService:
                     to=f"card-{card.id}"
                 )
 
-            # Don't send activities on card update.
-            # FIXME: Dumping needs better solution here.
-            dmp = CardDTO.card_schema.dump(card)
-            dmp.pop("activities", None)
+            dmp = CardDTO.update_card_schema.dump(card)
             socketio.emit(
                 SIOEvent.CARD_UPDATE.value,
                 SIODTO.event_schema.dump({

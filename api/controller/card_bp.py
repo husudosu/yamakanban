@@ -28,10 +28,10 @@ class CardAPI(MethodView):
         )
 
     def patch(self, card_id: int):
-        return CardDTO.card_schema.dump(card_service.patch(
+        return CardDTO.update_card_schema.dump(card_service.patch(
             current_user,
             card_id,
-            CardDTO.card_schema.load(request.json, partial=True)
+            CardDTO.update_card_schema.load(request.json, partial=True)
         ))
 
     def delete(self, card_id: int):
@@ -107,7 +107,7 @@ class CardDateAPI(MethodView):
             date_service.patch(
                 current_user,
                 date_id,
-                CardDTO.date_schema.load(request.json)
+                CardDTO.date_schema.load(request.json, partial=True)
             )
         )
 

@@ -198,7 +198,7 @@ def create_default_roles(board: Board) -> typing.List[BoardRole]:
         member_role.permissions.append(
             BoardRolePermission(
                 name=permission.value,
-                allow=permission != BoardPermission.BOARD_DELETE
+                allow=True
             )
         )
         # Disable everything for observer role, it has only view access

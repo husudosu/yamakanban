@@ -4,6 +4,7 @@ import sqlalchemy as sqla
 
 from api.model.board import Board, BoardAllowedUser, BoardRole
 from api.model.list import BoardList
+from api.model import BoardPermission
 from api.app import db
 
 from werkzeug.exceptions import Forbidden
@@ -70,7 +71,10 @@ def patch_board(current_user: User, board: Board, data: dict) -> Board:
     Returns:
         Board: Updated board ORM object
     """
-    if board.owner_id == current_user.id:
+
+    board_user: BoardAllowedUser = BoardAllowedUser.get_by_usr_or_403(
+        board.id, current_user.id)
+    if board.owner_id == current_user.id or board_user.has_permission(BoardPermission.BOARD_EDIT):
         board.update(**data)
         db.session.commit()
         db.session.refresh(board)
@@ -88,6 +92,8 @@ def delete_board(current_user: User, board: Board):
     Raises:
         Forbidden: User has no access to this board
     """
+
+    # Only allow deletion for owner
     if board.owner_id == current_user.id:
         db.session.delete(board)
         db.session.commit()
@@ -249,6 +255,7 @@ def remove_member(
     if not member.is_deleted:
         # If the user not soft deleted yet, do a soft delete.
         member.is_deleted = True
+        db.session.commit()
     else:
         db.session.delete(member)
         db.session.commit()
