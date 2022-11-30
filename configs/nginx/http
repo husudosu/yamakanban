@@ -18,7 +18,7 @@ server {
     add_header X-Frame-Options "SAMEORIGIN";
     add_header Content-Security-Policy "default-src 'self' http: https: data: blob: 'unsafe-inline'" always;
 
-    root /root/dist;
+    root /root/frontend/dist;
     index index.html;
     location / {
         add_header Cache-Control "no-cache";
