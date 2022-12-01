@@ -1,6 +1,7 @@
 FROM python:3.10-bullseye
 LABEL maintainer="Ferenc Nánási <husudosu94@gmail.com>"
 
+
 ENV FLASK_APP=run.py \
     FLASK_ENV=production \
     TZ="Europe/Budapest"
@@ -12,6 +13,7 @@ RUN apt update && \
     python3-dev \
     nginx \
     supervisor -y
+RUN openssl req -x509 -nodes -days 365 -subj "/C=CA/ST=QC/O=Company, Inc./CN=trelloclone.local" -addext "subjectAltName=DNS:trelloclone.local" -newkey rsa:2048 -keyout /etc/ssl/private/nginx-selfsigned.key -out /etc/ssl/certs/nginx-selfsigned.crt;
 
 # Install node.js and npm too.
 # Donwload and install Node.js (https://github.com/nodejs/docker-node/blob/9220863a62a5f9d76bb761d1e385674de39224a6/19/bullseye/Dockerfile)
@@ -45,6 +47,5 @@ COPY ./configs/nginx/http /etc/nginx/sites-enabled/default
 COPY ./configs/nginx/nginx.conf /etc/nginx/nginx.conf
 RUN chmod 777 boot.sh
 
-RUN openssl req -x509 -nodes -days 365 -subj "/C=CA/ST=QC/O=Company, Inc./CN=trelloclone.local" -addext "subjectAltName=DNS:trelloclone.local" -newkey rsa:2048 -keyout /etc/ssl/private/nginx-selfsigned.key -out /etc/ssl/certs/nginx-selfsigned.crt;
 EXPOSE 80
 EXPOSE 443

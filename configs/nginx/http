@@ -12,7 +12,12 @@ server {
 
     # Harden the security of the server
     add_header X-Frame-Options "SAMEORIGIN";
-    add_header Content-Security-Policy "default-src 'self' http: https: data: blob: 'unsafe-inline'" always;
+    add_header Content-Security-Policy "script-src 'self'; frame-src 'self'; object-src 'none'; default-src 'self';"; 
+    add_header X-XSS-Protection "1; mode=block";
+
+    # Turn off search engine indexing.
+    add_header X-Robots-Tag "noindex";
+
     # Allow only these HTTP methods
     if ($request_method !~ ^(GET|HEAD|POST|OPTIONS|DELETE|PATCH)$) { return 444; }
 
@@ -21,6 +26,9 @@ server {
     index index.html;
     location / {
         add_header Cache-Control "no-cache";
+        add_header Content-Security-Policy "script-src 'self'; frame-src 'self'; object-src 'none'; default-src 'self';"; 
+        add_header X-XSS-Protection "1; mode=block";
+        add_header X-Robots-Tag "noindex";
         include  /etc/nginx/mime.types;
         try_files $uri $uri/ /index.html;
     }
