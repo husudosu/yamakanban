@@ -1,4 +1,3 @@
-
 import typing
 import sqlalchemy as sqla
 import sqlalchemy.orm as sqla_orm

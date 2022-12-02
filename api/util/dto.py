@@ -27,3 +27,8 @@ class SIODTO:
     delete_event_scehma = schemas.SIODeleteEventSchema()
     checklist_event_schema = schemas.SIOCheckListEventSchema()
     delete_checklist_event_schema = schemas.SIOChecklistItemDeleteSchema()
+
+
+class ListDTO:
+    lists_schema = schemas.BoardListSchema()
+    update_list_schema = schemas.BoardListSchema(exclude=("cards",))
