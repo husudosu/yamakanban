@@ -32,3 +32,12 @@ class SIODTO:
 class ListDTO:
     lists_schema = schemas.BoardListSchema()
     update_list_schema = schemas.BoardListSchema(exclude=("cards",))
+
+
+class BoardDTO:
+    board_schema = schemas.BoardSchema()
+    boards_schema = schemas.BoardSchema(exclude=("lists",))
+    allowed_user_schema = schemas.BoardAllowedUserSchema()
+    allowed_users_schema = schemas.BoardAllowedUserSchema(
+        exclude=("role.permissions",))
+    roles_schema = schemas.BoardRoleSchema()

@@ -1,28 +1,15 @@
 
 from werkzeug.exceptions import Forbidden
 
-from flask import Blueprint, request, jsonify, abort
+from flask import Blueprint, request, abort, jsonify
 from flask.views import MethodView
 from flask_jwt_extended import current_user, jwt_required
 
-from api.model.board import Board, BoardAllowedUser, BoardRole
-from api.model.user import User
-from api.service import board as board_service
-from api.socket import SIOEvent
-from api.util.schemas import (
-    BoardAllowedUserSchema, BoardRoleSchema, BoardSchema
-)
+from api.service.board import board_service
+from api.util.dto import BoardDTO
 
-from api.app import socketio
 
 board_bp = Blueprint("board_bp", __name__)
-
-board_schema = BoardSchema()
-boards_schema = BoardSchema(exclude=("lists",))
-board_allowed_user_schema = BoardAllowedUserSchema()
-board_allowed_users_schema = BoardAllowedUserSchema(
-    exclude=("role.permissions",))
-board_roles_schema = BoardRoleSchema()
 
 
 class BoardAPI(MethodView):
@@ -31,34 +18,35 @@ class BoardAPI(MethodView):
     def get(self, board_id: int = None):
         # Get single board
         if board_id:
-            return board_schema.dump(
-                board_service.get_board(current_user, board_id)
+            return BoardDTO.board_schema.dump(
+                board_service.get(current_user, board_id)
             )
 
-        # Get all boards accessable for user
-        return jsonify(boards_schema.dump(
+        return jsonify(BoardDTO.boards_schema.dump(
             board_service.get_user_boards(current_user),
-            many=True,
+            many=True
         ))
 
     def post(self):
-        board = board_service.post_board(
-            current_user,
-            board_schema.load(request.json)
+        return BoardDTO.board_schema.dump(
+            board_service.post_board(
+                current_user,
+                BoardDTO.board_schema.load(request.json)
+            )
         )
-        return board_schema.dump(board)
 
     def patch(self, board_id: int):
-        updated_board = board_service.patch_board(
-            current_user,
-            Board.get_or_404(board_id),
-            board_schema.load(request.json)
+        return BoardDTO.board_schema.dump(
+            board_service.patch_board(
+                current_user,
+                board_id,
+                BoardDTO.board_schema.load(request.json)
+            )
         )
-        return board_schema.dump(updated_board)
 
     def delete(self, board_id: int):
-        board_service.delete_board(current_user, Board.get_or_404(board_id))
-        return {}
+        board_service.delete_board(current_user, board_id)
+        return {"message": "Board deleted"}
 
 
 class BoardListsOrderAPI(MethodView):
@@ -67,14 +55,8 @@ class BoardListsOrderAPI(MethodView):
     def patch(self, board_id: int):
         board_service.update_boardlists_position(
             current_user,
-            Board.get_or_404(board_id),
+            board_id,
             request.json
-        )
-        socketio.emit(
-            SIOEvent.LIST_UPDATE_ORDER.value,
-            request.json,
-            namespace="/board",
-            to=f"board-{board_id}"
         )
         return {}
 
@@ -85,21 +67,21 @@ class BoardUserClaimsAPI(MethodView):
     def get(self, board_id: int):
         claims = board_service.get_board_claims(
             current_user,
-            Board.get_or_404(board_id)
+            board_id
         )
         if not claims:
             raise Forbidden()
-        return board_allowed_user_schema.dump(claims)
+        return BoardDTO.allowed_user_schema.dump(claims)
 
 
 class BoardRolesAPI(MethodView):
     decorators = [jwt_required()]
 
     def get(self, board_id: int):
-        return jsonify(board_roles_schema.dump(
+        return jsonify(BoardDTO.roles_schema.dump(
             board_service.get_board_roles(
                 current_user,
-                Board.get_or_404(board_id)
+                board_id
             ),
             many=True
         ))
@@ -111,78 +93,54 @@ class BoardFindMemberAPI(MethodView):
     def post(self, board_id: int):
         member = board_service.get_member(
             current_user,
-            Board.get_or_404(board_id),
+            board_id,
             request.json["user_id"]
         )
         if not member:
-            abort(404, "Member not found.")
-        return board_allowed_user_schema.dump(member)
+            abort(404, "Member not found")
+        return BoardDTO.allowed_user_schema(member)
 
 
 class BoardMemberAPI(MethodView):
     decorators = [jwt_required()]
 
     def get(self, board_id: int):
-        return jsonify(board_allowed_users_schema.dump(
+        return jsonify(BoardDTO.allowed_users_schema.dump(
             board_service.get_members(
                 current_user,
-                Board.get_or_404(board_id)
+                board_id
             ),
             many=True
         ))
 
     def post(self, board_id: int):
-        data = board_allowed_user_schema.load(request.json)
-        member = board_service.add_member(
+        return BoardDTO.allowed_user_schema.dump(board_service.add_member(
             current_user,
-            Board.get_or_404(board_id),
-            User.get_or_404(data["user_id"]),
-            BoardRole.get_board_role_or_404(board_id, data["board_role_id"])
-        )
-        return board_allowed_user_schema.dump(member)
+            board_id,
+            request.json["user_id"],
+            request.json["board_role_id"]
+        ))
 
     def patch(self, board_id: int, user_id: int):
-        # TODO: Create marshmallow schema for loading data!
-        member = board_service.update_member_role(
-            current_user,
-            Board.get_or_404(board_id),
-            User.get_or_404(user_id),
-            BoardRole.get_board_role_or_404(
-                board_id, request.json["board_role_id"])
+        return BoardDTO.allowed_user_schema.dump(
+            board_service.update_member_role(
+                current_user,
+                board_id,
+                user_id,
+                request.json["board_role_id"]
+            )
         )
-        return board_allowed_user_schema.dump(member)
 
     def delete(self, board_id: int, user_id: int):
-        board = Board.get_or_404(board_id)
-        current_member = BoardAllowedUser.get_by_user_id(
-            board.id, current_user.id)
-
-        if not current_member:
-            abort(403)
-        member = BoardAllowedUser.get_by_user_id(board.id, user_id)
-
-        if not member:
-            abort(404)
-
-        board_service.remove_member(
-            current_member,
-            member
-        )
-        return {}
+        board_service.remove_member(board_id, current_user, user_id)
+        return {"message": "Revoked access for user."}
 
 
 class BoardMemberActivateAPI(MethodView):
     decorators = [jwt_required()]
 
     def post(self, member_id: int):
-        member_to_activate = BoardAllowedUser.get_or_404(member_id)
-        member = BoardAllowedUser.get_by_user_id(
-            member_to_activate.board_id, current_user.id)
-
-        if not member:
-            raise Forbidden()
-
-        board_service.activate_member(member, member_to_activate)
+        board_service.activate_member(current_user, member_id)
         return {}
 
 
