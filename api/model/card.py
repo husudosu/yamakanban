@@ -58,7 +58,7 @@ class CardComment(db.Model, BaseMixin):
     activity_id = sqla.Column(
         sqla.Integer, sqla.ForeignKey("card_activity.id", ondelete="CASCADE"))
     board_id = sqla.Column(
-        sqla.Integer, sqla.ForeignKey("board.id"), nullable=False
+        sqla.Integer, sqla.ForeignKey("board.id", ondelete="CASCADE"), nullable=False
     )
 
     comment = sqla.Column(sqla.Text)
@@ -83,7 +83,8 @@ class CardDate(db.Model, BaseMixin):
     id = sqla.Column(sqla.Integer, primary_key=True)
     card_id = sqla.Column(sqla.Integer, sqla.ForeignKey(
         "card.id", ondelete="CASCADE"))
-    board_id = sqla.Column(sqla.Integer, sqla.ForeignKey("board.id"))
+    board_id = sqla.Column(sqla.Integer, sqla.ForeignKey(
+        "board.id", ondelete="CASCADE"))
 
     dt_from = sqla.Column(sqla.DateTime)
     dt_to = sqla.Column(sqla.DateTime, nullable=False)
@@ -104,12 +105,15 @@ class Card(db.Model, BaseMixin):
     list_id = sqla.Column(
         sqla.Integer, sqla.ForeignKey("list.id", ondelete="CASCADE"), nullable=False)
     board_id = sqla.Column(
-        sqla.Integer, sqla.ForeignKey("board.id"), nullable=False
+        sqla.Integer, sqla.ForeignKey("board.id", ondelete="CASCADE"), nullable=False
     )
 
     title = sqla.Column(sqla.Text, nullable=False)
     description = sqla.Column(sqla.Text)
     position = sqla.Column(sqla.SmallInteger, default=0)
+
+    archived = sqla.Column(sqla.Boolean, server_default="0", default=False)
+    archived_on = sqla.Column(sqla.DateTime)
 
     board_list = sqla_orm.relationship(
         "BoardList", back_populates="cards"

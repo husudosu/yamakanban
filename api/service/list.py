@@ -1,5 +1,7 @@
 import typing
+
 import json
+from datetime import datetime
 from werkzeug.exceptions import Forbidden
 from api.app import db, socketio
 from api.model import BoardPermission, BoardActivityEvent
@@ -19,7 +21,17 @@ class ListService:
         board = Board.get_or_404(board_id)
         BoardAllowedUser.get_by_usr_or_403(
             board_id, current_user.id)
-        return board.lists
+
+        # Load cards into lists.
+        lists = []
+        for li in board.lists:
+            li.cards = Card.query.filter(
+                sqla.and_(
+                    Card.list_id == li.id,
+                    Card.archived == False
+                )
+            ).order_by(Card.position.asc()).all()
+        return lists
 
     def post(self, current_user: User, board_id: int, data: dict) -> BoardList:
         board: Board = Board.get_or_404(board_id)
@@ -98,12 +110,18 @@ class ListService:
         raise Forbidden()
 
     def delete(self, current_user: User, list_id: int):
-        board_list = BoardList.get_or_404(list_id)
+        board_list: BoardList = BoardList.get_or_404(list_id)
         current_member = BoardAllowedUser.get_by_usr_or_403(
             board_list.board_id, current_user.id)
         if current_member.has_permission(BoardPermission.LIST_DELETE):
-            dmp = ListDTO.lists_schema.dump(board_list)
-            db.session.delete(board_list)
+
+            if not board_list.archived:
+                board_list.archived = True
+                board_list.archived_on = datetime.utcnow()
+            else:
+                dmp = ListDTO.lists_schema.dump(board_list)
+                db.session.delete(board_list)
+
             db.session.commit()
 
             # TODO: This can be converted to entity_id based event.

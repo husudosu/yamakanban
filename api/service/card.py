@@ -1,5 +1,6 @@
 import json
 from werkzeug.exceptions import Forbidden, NotFound
+from datetime import datetime
 from marshmallow.exceptions import ValidationError
 import sqlalchemy as sqla
 from flask_sqlalchemy import Pagination
@@ -257,8 +258,13 @@ class CardService:
         if current_member.has_permission(BoardPermission.CARD_DELETE):
             list_id = card.list_id
 
-            db.session.delete(card)
+            if not card.archived:
+                card.archived = True
+                card.archived_on = datetime.utcnow()
+            else:
+                db.session.delete(card)
             db.session.commit()
+
             socketio.emit(
                 SIOEvent.CARD_DELETE.value,
                 SIODTO.delete_event_scehma.dump(

@@ -10,14 +10,22 @@ class BoardList(db.Model, BaseMixin):
 
     id = sqla.Column(sqla.Integer, primary_key=True)
     board_id = sqla.Column(
-        sqla.Integer, sqla.ForeignKey("board.id"), nullable=False)
+        sqla.Integer, sqla.ForeignKey("board.id", ondelete="CASCADE"), nullable=False)
     title = sqla.Column(sqla.Text, nullable=False)
     position = sqla.Column(sqla.SmallInteger, default=0)
 
+    archived = sqla.Column(sqla.Boolean, server_default="0", default=False)
+    archived_on = sqla.Column(sqla.DateTime)
+
     board = sqla_orm.relationship("Board", back_populates="lists")
+    # cards = sqla_orm.relationship(
+    #     "Card",
+    #     back_populates="board_list",
+    #     cascade="all, delete-orphan",
+    #     order_by="asc(Card.position)"
+    # )
     cards = sqla_orm.relationship(
         "Card",
         back_populates="board_list",
-        cascade="all, delete-orphan",
-        order_by="asc(Card.position)"
+        lazy="noload"
     )

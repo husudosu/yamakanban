@@ -21,7 +21,8 @@ class BoardRolePermission(db.Model, BaseMixin):
 class BoardRole(db.Model, BaseMixin):
     __tablename__ = "board_role"
     id = sqla.Column(sqla.Integer, primary_key=True)
-    board_id = sqla.Column(sqla.Integer, sqla.ForeignKey("board.id"))
+    board_id = sqla.Column(sqla.Integer, sqla.ForeignKey(
+        "board.id", ondelete="CASCADE"))
 
     name = sqla.Column(sqla.String, nullable=False)
     is_admin = sqla.Column(sqla.Boolean, default=False, nullable=False)
@@ -48,11 +49,11 @@ class BoardAllowedUser(db.Model, BaseMixin):
 
     id = sqla.Column(sqla.Integer, primary_key=True)
     user_id = sqla.Column(
-        sqla.Integer, sqla.ForeignKey("user.id"), nullable=False)
+        sqla.Integer, sqla.ForeignKey("user.id", ondelete="CASCADE"), nullable=False)
     board_id = sqla.Column(
-        sqla.Integer, sqla.ForeignKey("board.id"), nullable=False)
+        sqla.Integer, sqla.ForeignKey("board.id", ondelete="CASCADE"), nullable=False)
     board_role_id = sqla.Column(
-        sqla.Integer, sqla.ForeignKey("board_role.id")
+        sqla.Integer, sqla.ForeignKey("board_role.id", ondelete="CASCADE")
     )
     is_owner = sqla.Column(sqla.Boolean, default=False, nullable=False)
     is_deleted = sqla.Column(sqla.Boolean, default=False,
@@ -111,7 +112,7 @@ class Board(db.Model, BaseMixin):
     id = sqla.Column(sqla.Integer, primary_key=True)
     # Board owner id is User.id not BoardAllowedUser!
     owner_id = sqla.Column(
-        sqla.Integer, sqla.ForeignKey("user.id"), nullable=False)
+        sqla.Integer, sqla.ForeignKey("user.id", ondelete="CASCADE"), nullable=False)
     title = sqla.Column(sqla.Text, nullable=False)
 
     background_image = sqla.Column(sqla.Text)
@@ -131,12 +132,13 @@ class Board(db.Model, BaseMixin):
         cascade="all, delete-orphan"
     )
 
+    # Lists loaded by service class
     lists = sqla_orm.relationship(
         "BoardList",
-        cascade="all, delete-orphan",
         back_populates="board",
-        order_by="asc(BoardList.position)"
+        lazy="noload"
     )
+
     owner = sqla_orm.relationship(
         "User",
         back_populates="boards"

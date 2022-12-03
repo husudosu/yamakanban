@@ -131,6 +131,9 @@ class BoardListSchema(SQLAlchemySchema):
     title = fields.String(required=True)
     position = fields.Integer()
 
+    archived = fields.Boolean(dump_only=True)
+    archived_on = fields.DateTime("%Y-%m-%d %H:%M:%S", dump_only=True)
+
     cards = fields.Nested(
         lambda: CardSchema,
         many=True,
@@ -361,6 +364,9 @@ class CardSchema(SQLAlchemySchema):
     title = fields.String(required=True)
     description = fields.String(allow_none=True)
     position = fields.Integer()
+
+    archived = fields.Boolean(dump_only=True)
+    archived_on = fields.DateTime("%Y-%m-%d %H:%M:%S", dump_only=True)
 
     checklists = fields.Nested(CardChecklistSchema, many=True, dump_only=True)
     assigned_members = fields.Nested(

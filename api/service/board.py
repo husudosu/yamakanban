@@ -6,6 +6,7 @@ import sqlalchemy as sqla
 import sqlalchemy.orm as sqla_orm
 
 from api.model.board import Board, BoardAllowedUser, BoardRole, BoardActivity
+from api.model.card import Card
 from api.model.list import BoardList
 from api.model import BoardPermission, BoardActivityEvent
 from api.app import db, socketio
@@ -42,6 +43,23 @@ class BoardService:
     def get(self, current_user: User, board_id: int = None) -> Board:
         board = Board.get_or_404(board_id)
         if board.is_user_can_access(current_user.id):
+
+            # Get non archived lists first
+            board.lists = BoardList.query.filter(
+                sqla.and_(
+                    BoardList.board_id == board.id,
+                    BoardList.archived == False
+                )
+            ).order_by(BoardList.position.asc()).all()
+
+            # Get not archived list card
+            for li in board.lists:
+                li.cards = Card.query.filter(
+                    sqla.and_(
+                        Card.list_id == li.id,
+                        Card.archived == False
+                    )
+                ).order_by(Card.position.asc()).all()
             return board
         raise Forbidden()
 

@@ -10,7 +10,7 @@ class ChecklistItem(db.Model, BaseMixin):
     __tablename__ = "card_checklist_item"
     id = sqla.Column(sqla.Integer, primary_key=True)
     checklist_id = sqla.Column(
-        sqla.Integer, sqla.ForeignKey("card_checklist.id"))
+        sqla.Integer, sqla.ForeignKey("card_checklist.id", ondelete="CASCADE"))
     marked_complete_board_user_id = sqla.Column(
         sqla.Integer, sqla.ForeignKey("board_allowed_user.id", ondelete="CASCADE"))
     assigned_board_user_id = sqla.Column(
@@ -18,7 +18,7 @@ class ChecklistItem(db.Model, BaseMixin):
             "board_allowed_user.id", ondelete="CASCADE")
     )
     board_id = sqla.Column(
-        sqla.Integer, sqla.ForeignKey("board.id"), nullable=False
+        sqla.Integer, sqla.ForeignKey("board.id", ondelete="CASCADE"), nullable=False
     )
 
     title = sqla.Column(sqla.Text)
@@ -41,9 +41,10 @@ class CardChecklist(db.Model, BaseMixin):
 
     __tablename__ = "card_checklist"
     id = sqla.Column(sqla.Integer, primary_key=True)
-    card_id = sqla.Column(sqla.Integer, sqla.ForeignKey("card.id"))
+    card_id = sqla.Column(sqla.Integer, sqla.ForeignKey(
+        "card.id", ondelete="CASCADE"))
     board_id = sqla.Column(
-        sqla.Integer, sqla.ForeignKey("board.id"), nullable=False
+        sqla.Integer, sqla.ForeignKey("board.id", ondelete="CASCADE"), nullable=False
     )
     title = sqla.Column(sqla.Text)
 
