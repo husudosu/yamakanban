@@ -19,7 +19,7 @@ from api.model.user import User
 
 class BoardService:
 
-    def get_user_boards(self, current_user: User) -> List[Board]:
+    def get_user_boards(self, current_user: User, args: dict) -> List[Board]:
         """Gets accessible non-archived user boards. 
 
         Args:
@@ -33,7 +33,8 @@ class BoardService:
                 sqla.and_(
                     BoardAllowedUser.user_id == current_user.id,
                     BoardAllowedUser.is_deleted == False,
-                    BoardAllowedUser.board.has(Board.archived == False)
+                    BoardAllowedUser.board.has(
+                        Board.archived == args["archived"])
                 )
             ).options(sqla_orm.load_only(BoardAllowedUser.id)).all()
         ]

@@ -36,6 +36,7 @@ class ListDTO:
 
 class BoardDTO:
     board_schema = schemas.BoardSchema()
+    board_query_schema = schemas.BoardQuerySchema()
     boards_schema = schemas.BoardSchema(exclude=("lists",))
     allowed_user_schema = schemas.BoardAllowedUserSchema()
     allowed_users_schema = schemas.BoardAllowedUserSchema(

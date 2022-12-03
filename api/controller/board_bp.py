@@ -4,6 +4,7 @@ from werkzeug.exceptions import Forbidden
 from flask import Blueprint, request, abort, jsonify
 from flask.views import MethodView
 from flask_jwt_extended import current_user, jwt_required
+from webargs.flaskparser import use_args
 
 from api.service.board import board_service
 from api.util.dto import BoardDTO
@@ -14,7 +15,8 @@ board_bp = Blueprint("board_bp", __name__)
 class BoardAPI(MethodView):
     decorators = [jwt_required()]
 
-    def get(self, board_id: int = None):
+    @use_args(BoardDTO.board_query_schema, location="query")
+    def get(self, args: dict, board_id: int = None):
         # Get single board
         if board_id:
             return BoardDTO.board_schema.dump(
@@ -22,7 +24,7 @@ class BoardAPI(MethodView):
             )
 
         return jsonify(BoardDTO.boards_schema.dump(
-            board_service.get_user_boards(current_user),
+            board_service.get_user_boards(current_user, args),
             many=True
         ))
 

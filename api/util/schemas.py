@@ -160,6 +160,10 @@ class BoardSchema(SQLAlchemySchema):
         model = Board
 
 
+class BoardQuerySchema(Schema):
+    archived = fields.Boolean(missing=False)
+
+
 class BoardRolePermissionSchema(SQLAlchemySchema):
     id = fields.Integer(dump_only=True)
     name = fields.String(dump_only=True)
