@@ -114,12 +114,12 @@ class ListService:
         current_member = BoardAllowedUser.get_by_usr_or_403(
             board_list.board_id, current_user.id)
         if current_member.has_permission(BoardPermission.LIST_DELETE):
-
+            dmp = ListDTO.lists_schema.dump(board_list)
             if not board_list.archived:
                 board_list.archived = True
                 board_list.archived_on = datetime.utcnow()
             else:
-                dmp = ListDTO.lists_schema.dump(board_list)
+                
                 db.session.delete(board_list)
 
             db.session.commit()
