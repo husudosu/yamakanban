@@ -135,7 +135,7 @@ class BoardListSchema(SQLAlchemySchema):
         lambda: CardSchema,
         many=True,
         only=("id", "title", "position", "list_id",
-              "assigned_members", "dates", "checklists",),
+              "assigned_members", "dates", "checklists.title", "checklists.items.completed", "checklists.items.id"),
         dump_only=True
     )
 
