@@ -1,11 +1,13 @@
 from typing import List
+from datetime import datetime
+import json
 import typing
 import sqlalchemy as sqla
 import sqlalchemy.orm as sqla_orm
 
-from api.model.board import Board, BoardAllowedUser, BoardRole
+from api.model.board import Board, BoardAllowedUser, BoardRole, BoardActivity
 from api.model.list import BoardList
-from api.model import BoardPermission
+from api.model import BoardPermission, BoardActivityEvent
 from api.app import db, socketio
 from api.socket import SIOEvent
 
@@ -18,19 +20,20 @@ from api.model.user import User
 class BoardService:
 
     def get_user_boards(self, current_user: User) -> List[Board]:
-        """Gets boards which available for user.
+        """Gets accessible non-archived user boards. 
 
         Args:
-            current_user (User): Current logged in user
+            current_user (User): _description_
 
         Returns:
-            List[Board]: List of boards.
+            List[Board]: _description_
         """
         return [
             entry.board for entry in BoardAllowedUser.query.filter(
                 sqla.and_(
                     BoardAllowedUser.user_id == current_user.id,
-                    BoardAllowedUser.is_deleted == False
+                    BoardAllowedUser.is_deleted == False,
+                    BoardAllowedUser.board.has(Board.archived == False)
                 )
             ).options(sqla_orm.load_only(BoardAllowedUser.id)).all()
         ]
@@ -41,7 +44,7 @@ class BoardService:
             return board
         raise Forbidden()
 
-    def post_board(self, current_user: User, data: dict) -> Board:
+    def post(self, current_user: User, data: dict) -> Board:
         """Creates a new board
 
         Args:
@@ -54,9 +57,19 @@ class BoardService:
         board = Board(owner_id=current_user.id, **data)
         db.session.add(board)
         db.session.commit()
+        # Create Board activity
+        current_member = BoardAllowedUser.get_by_usr_or_403(
+            board.id, current_user.id)
+        board.activities.append(
+            BoardActivity(
+                board_user_id=current_member.id,
+                event=BoardActivityEvent.BOARD_CREATE.value,
+            )
+        )
+        db.session.commit()
         return board
 
-    def patch_board(self, current_user: User, board_id: int, data: dict) -> Board:
+    def patch(self, current_user: User, board_id: int, data: dict) -> Board:
         """Updates a board.
 
         Args:
@@ -80,23 +93,54 @@ class BoardService:
             return board
         raise Forbidden()
 
-    def delete_board(self, current_user: User, board_id: int):
-        """Deletes a board.
+    def delete(self, current_user: User, board_id: int):
+        """First archives the board. For the second time deletes board from db.
 
         Args:
-            current_user (User): Current logged in user
-            board (Board): Board ORM object to delete
-
-        Raises:
-            Forbidden: User has no access to this board
+            current_user (User): Current user
+            board_id (int): Board id to archive/delete
         """
-
         # Only allow deletion for owner
-        board = Board.get_or_404(board_id)
+        board: Board = Board.get_or_404(board_id)
+        current_member = BoardAllowedUser.get_by_usr_or_403(
+            board_id, current_user.id)
 
+        # Board owner id is User.id not BoardAllowedUser.id!
         if board.owner_id == current_user.id:
-            db.session.delete(board)
+            if not board.archived:
+                board.archived = True
+                board.archived_on = datetime.utcnow()
+
+                # Create activity
+                board.activities.append(
+                    BoardActivity(
+                        board_user_id=current_member.id,
+                        event=BoardActivityEvent.BOARD_ARCHIVE.value,
+                    )
+                )
+            else:
+                db.session.delete(board)
             db.session.commit()
+        else:
+            raise Forbidden()
+
+    def revert(self, current_user: User, board_id: int):
+        board: Board = Board.get_or_404(board_id)
+        current_member = BoardAllowedUser.get_by_usr_or_403(
+            board_id, current_user.id)
+        if board.owner_id == current_user.id:
+            if board.archived:
+                board.archived = False
+                board.archived_on = None
+
+                # Create activity
+                board.activities.append(
+                    BoardActivity(
+                        board_user_id=current_member.id,
+                        event=BoardActivityEvent.BOARD_REVERT.value,
+                    )
+                )
+                db.session.commit()
         else:
             raise Forbidden()
 
@@ -163,19 +207,6 @@ class BoardService:
     def get_member(
         self, current_user: User, board_id: int, user_id: int
     ) -> typing.Union[BoardAllowedUser, None]:
-        """Gets board member if exists.
-
-        Args:
-            current_user (User): Current logged in user
-            board (Board): Board
-            user_id (int): User ID which we want to get board user.
-
-        Raises:
-            Forbidden: Don't have permission to access the board
-
-        Returns:
-            typing.Union[BoardAllowedUser, None]: Board user or None if not exists.
-        """
         board = Board.get_or_404(board_id)
         BoardAllowedUser.get_by_usr_or_403(board_id, current_user.id)
         return board.get_board_user(user_id)
@@ -191,14 +222,14 @@ class BoardService:
         self, current_user: User, board_id: int,
         new_user_id: int, new_member_role_id: int
     ) -> BoardAllowedUser:
-        board = Board.get_or_404(board_id)
+        board: Board = Board.get_or_404(board_id)
         current_member = BoardAllowedUser.get_by_usr_or_403(
             board_id, current_user.id)
 
         if not current_member.role.is_admin:
             raise Forbidden()
-        # Check if user already exists
 
+        # Check if user already exists
         if BoardAllowedUser.query.filter(
             sqla.and_(
                 BoardAllowedUser.user_id == new_user_id,
@@ -214,6 +245,23 @@ class BoardService:
                 board.id, new_member_role_id).id,
         )
         board.board_users.append(member)
+        db.session.commit()
+
+        board.activities.append(
+            BoardActivity(
+                board_user_id=current_member.id,
+                event=BoardActivityEvent.MEMBER_ADD.value,
+                changes=json.dumps(
+                    {
+                        "to":
+                            {
+                                "member_user_name": member.user.name,
+                                "member_role_name": member.role.name
+                            }
+                    }
+                )
+            )
+        )
         db.session.commit()
         return member
 
@@ -236,10 +284,30 @@ class BoardService:
             raise Forbidden()
 
         member = board.get_board_user(user.id)
+        old_member_role_name = member.role.name
         member.role = role
 
         db.session.commit()
-        db.session.refresh(member)
+
+        board.activities.append(
+            BoardActivity(
+                board_user_id=current_member.id,
+                event=BoardActivityEvent.MEMBER_CHANGE_ROLE.value,
+                changes=json.dumps(
+                    {
+                        "from": {
+                            "member_user_name": member.user.name,
+                            "member_role_name": old_member_role_name
+                        },
+                        "to": {
+                            "member_user_name": member.user.name,
+                            "member_role_name": member.role.name
+                        }
+                    }
+                )
+            )
+        )
+        db.session.commit()
         return member
 
     def remove_member(
@@ -262,9 +330,36 @@ class BoardService:
         if not member.is_deleted:
             # If the user not soft deleted yet, do a soft delete.
             member.is_deleted = True
+            board.activities.append(
+                BoardActivity(
+                    board_user_id=current_member.id,
+                    event=BoardActivityEvent.MEMBER_ACCESS_REVOKE.value,
+                    changes=json.dumps(
+                        {
+                            "to": {
+                                "member_user_name": member.user.name,
+                            },
+                        }
+                    )
+                )
+            )
             db.session.commit()
         else:
+            member_user_name = member.user.name
             db.session.delete(member)
+            board.activities.append(
+                BoardActivity(
+                    board_user_id=current_member.id,
+                    event=BoardActivityEvent.MEMBER_DELETE.value,
+                    changes=json.dumps(
+                        {
+                            "to": {
+                                "member_user_name": member_user_name,
+                            },
+                        }
+                    )
+                )
+            )
             db.session.commit()
 
     def activate_member(
@@ -277,6 +372,19 @@ class BoardService:
             raise Forbidden()
 
         member.is_deleted = False
+        current_member.board.activities.append(
+            BoardActivity(
+                board_user_id=current_member.id,
+                event=BoardActivityEvent.MEMBER_REVERT.value,
+                changes=json.dumps(
+                    {
+                        "to": {
+                            "member_user_name": member.user.name,
+                        },
+                    }
+                )
+            )
+        )
         db.session.commit()
 
 

@@ -12,9 +12,10 @@ class ChecklistItem(db.Model, BaseMixin):
     checklist_id = sqla.Column(
         sqla.Integer, sqla.ForeignKey("card_checklist.id"))
     marked_complete_board_user_id = sqla.Column(
-        sqla.Integer, sqla.ForeignKey("board_allowed_user.id"))
+        sqla.Integer, sqla.ForeignKey("board_allowed_user.id", ondelete="CASCADE"))
     assigned_board_user_id = sqla.Column(
-        sqla.Integer, sqla.ForeignKey("board_allowed_user.id")
+        sqla.Integer, sqla.ForeignKey(
+            "board_allowed_user.id", ondelete="CASCADE")
     )
     board_id = sqla.Column(
         sqla.Integer, sqla.ForeignKey("board.id"), nullable=False

@@ -13,7 +13,7 @@ class CardActivity(db.Model, BaseMixin):
     card_id = sqla.Column(
         sqla.Integer, sqla.ForeignKey("card.id", ondelete="CASCADE"), nullable=False)
     board_user_id = sqla.Column(
-        sqla.Integer, sqla.ForeignKey("board_allowed_user.id"), nullable=False)
+        sqla.Integer, sqla.ForeignKey("board_allowed_user.id", ondelete="CASCADE"), nullable=False)
     activity_on = sqla.Column(
         sqla.DateTime,
         default=datetime.utcnow
@@ -43,7 +43,7 @@ class CardMember(db.Model, BaseMixin):
     card_id = sqla.Column(
         sqla.ForeignKey("card.id", ondelete="CASCADE"), nullable=False)
     board_user_id = sqla.Column(sqla.ForeignKey(
-        "board_allowed_user.id"), nullable=False)
+        "board_allowed_user.id", ondelete="CASCADE"), nullable=False)
 
     send_notification = sqla.Column(sqla.Boolean, default=True, nullable=False)
 
@@ -54,7 +54,7 @@ class CardComment(db.Model, BaseMixin):
     __tablename__ = "card_comment"
     id = sqla.Column(sqla.Integer, primary_key=True)
     board_user_id = sqla.Column(sqla.ForeignKey(
-        "board_allowed_user.id"), nullable=False)
+        "board_allowed_user.id", ondelete="CASCADE"), nullable=False)
     activity_id = sqla.Column(
         sqla.Integer, sqla.ForeignKey("card_activity.id", ondelete="CASCADE"))
     board_id = sqla.Column(

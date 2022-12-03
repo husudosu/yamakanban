@@ -1,6 +1,8 @@
 import typing
 import sqlalchemy as sqla
 import sqlalchemy.orm as sqla_orm
+from datetime import datetime
+
 from api.app import db
 from . import BaseMixin, BoardPermission
 from werkzeug.exceptions import NotFound, Forbidden
@@ -107,12 +109,17 @@ class Board(db.Model, BaseMixin):
     __tablename__ = "board"
 
     id = sqla.Column(sqla.Integer, primary_key=True)
+    # Board owner id is User.id not BoardAllowedUser!
     owner_id = sqla.Column(
         sqla.Integer, sqla.ForeignKey("user.id"), nullable=False)
     title = sqla.Column(sqla.Text, nullable=False)
 
     background_image = sqla.Column(sqla.Text)
     background_color = sqla.Column(sqla.Text)
+
+    archived = sqla.Column(sqla.Boolean, server_default="0",
+                           default=False, nullable=False)
+    archived_on = sqla.Column(sqla.DateTime)
 
     board_users = sqla_orm.relationship(
         "BoardAllowedUser",
@@ -133,6 +140,12 @@ class Board(db.Model, BaseMixin):
     owner = sqla_orm.relationship(
         "User",
         back_populates="boards"
+    )
+    activities = sqla_orm.relationship(
+        "BoardActivity",
+        cascade="all, delete-orphan",
+        back_populates="board",
+        order_by="desc(BoardActivity.activity_on)"
     )
 
     def __init__(self, **kwargs):
@@ -178,6 +191,23 @@ class Board(db.Model, BaseMixin):
                 BoardAllowedUser.user_id == user_id
             )
         ).first()
+
+
+class BoardActivity(db.Model, BaseMixin):
+    __tablename__ = "board_activity"
+
+    id = sqla.Column(sqla.Integer, primary_key=True)
+    board_id = sqla.Column(sqla.Integer, sqla.ForeignKey(
+        "board.id", ondelete="CASCADE"), nullable=False)
+    board_user_id = sqla.Column(sqla.Integer, sqla.ForeignKey(
+        "board_allowed_user.id", ondelete="CASCADE"), nullable=False)
+    activity_on = sqla.Column(sqla.DateTime, default=datetime.utcnow)
+
+    # BoardActivityEvent
+    event = sqla.Column(sqla.Text, nullable=False)
+    changes = sqla.Column(sqla.Text, default="{}")
+
+    board = sqla_orm.relationship("Board", back_populates="activities")
 
 
 def create_default_roles(board: Board) -> typing.List[BoardRole]:

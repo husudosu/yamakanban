@@ -8,7 +8,6 @@ from flask_jwt_extended import current_user, jwt_required
 from api.service.board import board_service
 from api.util.dto import BoardDTO
 
-
 board_bp = Blueprint("board_bp", __name__)
 
 
@@ -29,7 +28,7 @@ class BoardAPI(MethodView):
 
     def post(self):
         return BoardDTO.board_schema.dump(
-            board_service.post_board(
+            board_service.post(
                 current_user,
                 BoardDTO.board_schema.load(request.json)
             )
@@ -37,7 +36,7 @@ class BoardAPI(MethodView):
 
     def patch(self, board_id: int):
         return BoardDTO.board_schema.dump(
-            board_service.patch_board(
+            board_service.patch(
                 current_user,
                 board_id,
                 BoardDTO.board_schema.load(request.json)
@@ -45,8 +44,19 @@ class BoardAPI(MethodView):
         )
 
     def delete(self, board_id: int):
-        board_service.delete_board(current_user, board_id)
+        board_service.delete(current_user, board_id)
         return {"message": "Board deleted"}
+
+
+class RevertBoardAPI(MethodView):
+    decorators = [jwt_required()]
+
+    def post(self, board_id: int):
+        """
+        Reverts board.
+        """
+        board_service.revert(current_user, board_id)
+        return {"message": "Board reverted"}
 
 
 class BoardListsOrderAPI(MethodView):
@@ -145,6 +155,7 @@ class BoardMemberActivateAPI(MethodView):
 
 
 board_view = BoardAPI.as_view("board-view")
+revertboard_view = RevertBoardAPI.as_view("revertboard-view")
 board_list_order_view = BoardListsOrderAPI.as_view("board-list-order-view")
 board_user_claims_view = BoardUserClaimsAPI.as_view("board-user-claims-view")
 board_roles_view = BoardRolesAPI.as_view("board-roles-views")
@@ -155,6 +166,9 @@ board_member_activate_view = BoardMemberActivateAPI.as_view(
 
 
 board_bp.add_url_rule("/board", methods=["GET", "POST"], view_func=board_view)
+board_bp.add_url_rule("/board/<board_id>/revert",
+                      methods=["POST"], view_func=revertboard_view)
+
 board_bp.add_url_rule("/board/<board_id>",
                       methods=["GET", "PATCH", "DELETE"], view_func=board_view)
 

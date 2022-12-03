@@ -48,6 +48,27 @@ class BoardPermission(enum.Enum):
     CHECKLIST_ITEM_MARK = "checklist_item.mark"
 
 
+class BoardActivityEvent(enum.Enum):
+    BOARD_CREATE = "board.create"
+    BOARD_ARCHIVE = "board.archive"
+    BOARD_CHANGE_TITLE = "board.change_title"
+    BOARD_CHANGE_OWNER = "board.change-owner"
+    BOARD_REVERT = "board.revert"
+
+    MEMBER_ADD = "member.add"
+    MEMBER_ACCESS_REVOKE = "member.access_revoke"
+    MEMBER_DELETE = "member.delete"
+    MEMBER_REVERT = "member.revert"
+    MEMBER_CHANGE_ROLE = "member.change_role"
+
+    LIST_CREATE = "list.create"
+    LIST_UPDATE = "list.update"
+    LIST_ARCHIVE = "list.archive"
+    LIST_REVERT = "list.revert"
+    LIST_DELETE = "list.delete"
+
+
+# TODO: ! Convert CardActivityEvent to enum, BE CAREFUL WE NEED SOME conversion on migration!
 class CardActivityEvent(RestEnum):
     CARD_ASSIGN_TO_LIST = 1
     CARD_MOVE_TO_LIST = 2

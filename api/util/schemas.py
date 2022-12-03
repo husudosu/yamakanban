@@ -6,7 +6,8 @@ from marshmallow import (Schema, ValidationError,
 from marshmallow_sqlalchemy import SQLAlchemySchema
 
 from api.model.board import (
-    Board, BoardAllowedUser, BoardRole, BoardRolePermission
+    Board, BoardAllowedUser, BoardRole, BoardRolePermission,
+    BoardActivity
 )
 from api.model.card import Card, CardComment, CardDate
 from api.model.checklist import ChecklistItem, CardChecklist
@@ -152,6 +153,9 @@ class BoardSchema(SQLAlchemySchema):
     background_image = fields.String()
     background_color = fields.String()
 
+    archived = fields.Boolean(dump_only=True)
+    archived_on = fields.DateTime("%Y-%m-%d %H:%M:%S", dump_only=True)
+
     class Meta:
         model = Board
 
@@ -190,6 +194,18 @@ class BoardAllowedUserSchema(SQLAlchemySchema):
 
     class Meta:
         model = BoardAllowedUser
+
+
+class BoardActivitySchema(SQLAlchemySchema):
+    id = fields.Integer(dump_only=True)
+    board_id = fields.Integer(dump_only=True)
+    board_user_id = fields.Integer(dump_only=True)
+    activity_on = fields.DateTime("%Y-%m-%d %H:%M:%S", dump_only=True)
+    event = fields.String(dump_only=True)
+    changes = fields.String(dump_only=True)
+
+    class Meta:
+        model = BoardActivity
 
 
 class CardMemberSchema(SQLAlchemySchema):
