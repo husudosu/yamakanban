@@ -202,6 +202,7 @@ class BoardActivity(db.Model, BaseMixin):
     board_user_id = sqla.Column(sqla.Integer, sqla.ForeignKey(
         "board_allowed_user.id", ondelete="CASCADE"), nullable=False)
     activity_on = sqla.Column(sqla.DateTime, default=datetime.utcnow)
+    entity_id = sqla.Column(sqla.Integer)
 
     # BoardActivityEvent
     event = sqla.Column(sqla.Text, nullable=False)

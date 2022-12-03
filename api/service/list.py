@@ -1,10 +1,10 @@
 import typing
+import json
 from werkzeug.exceptions import Forbidden
-
 from api.app import db, socketio
-from api.model import BoardPermission
+from api.model import BoardPermission, BoardActivityEvent
 from api.model.user import User
-from api.model.board import BoardAllowedUser, Board
+from api.model.board import BoardAllowedUser, Board, BoardActivity
 from api.model.list import BoardList
 from api.model.card import Card
 from api.socket import SIOEvent
@@ -22,11 +22,10 @@ class ListService:
         return board.lists
 
     def post(self, current_user: User, board_id: int, data: dict) -> BoardList:
-        board = Board.get_or_404(board_id)
+        board: Board = Board.get_or_404(board_id)
         current_member = BoardAllowedUser.get_by_usr_or_403(
             board_id, current_user.id)
         if current_member.has_permission(BoardPermission.LIST_CREATE):
-            # TODO Add activity log entry too!
             position_max = db.engine.execute(
                 f"SELECT MAX(position) FROM list WHERE board_id={board.id}"
             ).fetchone()
@@ -36,9 +35,21 @@ class ListService:
                 boardlist.position = position_max[0] + 1
             board.lists.append(boardlist)
 
-            db.session.add(boardlist)
+            board.activities.append(
+                BoardActivity(
+                    board_user_id=current_member.id,
+                    event=BoardActivityEvent.LIST_CREATE.value,
+                    entity_id=boardlist.id,
+                    changes=json.dumps(
+                        {
+                            "to": {
+                                "title": boardlist.title
+                            }
+                        }
+                    )
+                )
+            )
             db.session.commit()
-            db.session.refresh(boardlist)
 
             socketio.emit(
                 SIOEvent.LIST_NEW.value,
@@ -55,10 +66,27 @@ class ListService:
         current_member = BoardAllowedUser.get_by_usr_or_403(
             board_list.board_id, current_user.id)
         if current_member.has_permission(BoardPermission.LIST_EDIT):
-            # TODO Add activity log entry too!
+            old_title = data["title"]
             board_list.update(**data)
+
+            board_list.board.activities.append(
+                BoardActivity(
+                    board_user_id=current_member.id,
+                    event=BoardActivityEvent.LIST_UPDATE.value,
+                    entity_id=board_list.id,
+                    changes=json.dumps(
+                        {
+                            "from": {
+                                "title": old_title
+                            },
+                            "to": {
+                                "title": board_list.title
+                            }
+                        }
+                    )
+                )
+            )
             db.session.commit()
-            db.session.refresh(board_list)
 
             socketio.emit(
                 SIOEvent.LIST_UPDATE.value,

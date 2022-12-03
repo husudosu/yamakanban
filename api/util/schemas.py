@@ -205,6 +205,7 @@ class BoardActivitySchema(SQLAlchemySchema):
     board_id = fields.Integer(dump_only=True)
     board_user_id = fields.Integer(dump_only=True)
     activity_on = fields.DateTime("%Y-%m-%d %H:%M:%S", dump_only=True)
+    entity_id = fields.Integer()
     event = fields.String(dump_only=True)
     changes = fields.String(dump_only=True)
 
