@@ -81,7 +81,6 @@ class ChecklistService:
         if current_member.has_permission(BoardPermission.CHECKLIST_EDIT):
             checklist.update(**data)
             db.session.commit()
-            db.session.refresh(checklist)
 
             socketio.emit(
                 SIOEvent.CARD_CHECKLIST_UPDATE.value,
@@ -185,7 +184,6 @@ class ChecklistItemService:
             # TODO Send Email notification for assigned user
             # TODO: Create activity objects.
             db.session.commit()
-            db.session.refresh(item)
 
             socketio.emit(
                 SIOEvent.CHECKLIST_ITEM_NEW.value,
@@ -304,7 +302,6 @@ class ChecklistItemService:
             item.update(**data)
 
             db.session.commit()
-            db.session.refresh(item)
 
             socketio.emit(
                 SIOEvent.CHECKLIST_ITEM_UPDATE.value,
@@ -333,7 +330,6 @@ class ChecklistItemService:
             item.update(completed=data["completed"])
 
             db.session.commit()
-            db.session.refresh(item)
 
             socketio.emit(
                 SIOEvent.CHECKLIST_ITEM_UPDATE.value,

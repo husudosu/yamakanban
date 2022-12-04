@@ -111,7 +111,6 @@ def register():
 
     db.session.add(usr)
     db.session.commit()
-    db.session.refresh(usr)
 
     return user_schema.dump(usr)
 
@@ -218,7 +217,6 @@ def patch_user(id: int):
             request.json, session=db.session, instance=current_user)
         current_user.update(**data)
         db.session.commit()
-        db.session.refresh(current_user)
         return user_schema.dump(current_user)
     elif not current_user.has_role("admin"):
         raise we.Forbidden("Don't have permission.")
@@ -230,7 +228,6 @@ def patch_user(id: int):
             request.json, session=db.session, instance=usr)
         usr.update(**data)
         db.session.commit()
-        db.session.refresh(usr)
         return user_schema.dump(usr)
 
 

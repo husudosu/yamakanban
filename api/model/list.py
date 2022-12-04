@@ -18,12 +18,6 @@ class BoardList(db.Model, BaseMixin):
     archived_on = sqla.Column(sqla.DateTime)
 
     board = sqla_orm.relationship("Board", back_populates="lists")
-    # cards = sqla_orm.relationship(
-    #     "Card",
-    #     back_populates="board_list",
-    #     cascade="all, delete-orphan",
-    #     order_by="asc(Card.position)"
-    # )
     cards = sqla_orm.relationship(
         "Card",
         back_populates="board_list",

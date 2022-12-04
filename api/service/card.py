@@ -216,7 +216,6 @@ class CardService:
                     setattr(card, key, value)
 
             db.session.commit()
-            db.session.refresh(card)
 
             # Send card activities
             for activity in activities:
@@ -319,7 +318,6 @@ class CommentService:
             )
             card.activities.append(activity)
             db.session.commit()
-            db.session.refresh(activity)
 
             socketio.emit(
                 SIOEvent.CARD_ACTIVITY.value,

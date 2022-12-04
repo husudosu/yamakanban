@@ -5,16 +5,15 @@ import typing
 import sqlalchemy as sqla
 import sqlalchemy.orm as sqla_orm
 
+from werkzeug.exceptions import Forbidden
+from marshmallow.exceptions import ValidationError
+
 from api.model.board import Board, BoardAllowedUser, BoardRole, BoardActivity
 from api.model.card import Card
 from api.model.list import BoardList
 from api.model import BoardPermission, BoardActivityEvent
 from api.app import db, socketio
 from api.socket import SIOEvent
-
-from werkzeug.exceptions import Forbidden
-from marshmallow.exceptions import ValidationError
-
 from api.model.user import User
 
 
@@ -42,26 +41,25 @@ class BoardService:
 
     def get(self, current_user: User, board_id: int = None) -> Board:
         board = Board.get_or_404(board_id)
-        if board.is_user_can_access(current_user.id):
+        BoardAllowedUser.get_by_usr_or_403(board_id, current_user.id)
 
-            # Get non archived lists first
-            board.lists = BoardList.query.filter(
+        # Get non archived lists first
+        board.lists = BoardList.query.filter(
+            sqla.and_(
+                BoardList.board_id == board.id,
+                BoardList.archived == False
+            )
+        ).order_by(BoardList.position.asc()).all()
+
+        # Get not archived list card
+        for li in board.lists:
+            li.cards = Card.query.filter(
                 sqla.and_(
-                    BoardList.board_id == board.id,
-                    BoardList.archived == False
+                    Card.list_id == li.id,
+                    Card.archived == False
                 )
-            ).order_by(BoardList.position.asc()).all()
-
-            # Get not archived list card
-            for li in board.lists:
-                li.cards = Card.query.filter(
-                    sqla.and_(
-                        Card.list_id == li.id,
-                        Card.archived == False
-                    )
-                ).order_by(Card.position.asc()).all()
-            return board
-        raise Forbidden()
+            ).order_by(Card.position.asc()).all()
+        return board
 
     def post(self, current_user: User, data: dict) -> Board:
         """Creates a new board
@@ -108,7 +106,6 @@ class BoardService:
         if board.owner_id == current_user.id or current_member.has_permission(BoardPermission.BOARD_EDIT):
             board.update(**data)
             db.session.commit()
-            db.session.refresh(board)
             return board
         raise Forbidden()
 
@@ -169,14 +166,13 @@ class BoardService:
         board = Board.get_or_404(board_id)
         BoardAllowedUser.get_by_usr_or_403(board_id, current_user.id)
 
-        if board.is_user_can_access(current_user.id):
-            for index, item in enumerate(data):
-                db.session.query(BoardList).filter(
-                    sqla.and_(
-                        BoardList.id == item,
-                        BoardList.board_id == board.id
-                    )
-                ).update({"position": index})
+        for index, item in enumerate(data):
+            db.session.query(BoardList).filter(
+                sqla.and_(
+                    BoardList.id == item,
+                    BoardList.board_id == board.id
+                )
+            ).update({"position": index})
         db.session.commit()
         socketio.emit(
             SIOEvent.LIST_UPDATE_ORDER.value,

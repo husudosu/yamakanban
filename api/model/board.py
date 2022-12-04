@@ -77,7 +77,8 @@ class BoardAllowedUser(db.Model, BaseMixin):
         usr = cls.query.filter(
             sqla.and_(
                 cls.board_id == board_id,
-                cls.user_id == user_id
+                cls.user_id == user_id,
+                cls.is_deleted == False
             )
         ).first()
 
@@ -164,18 +165,6 @@ class Board(db.Model, BaseMixin):
                 role=roles[0]
             )
         )
-
-    def is_user_can_access(self, user_id: int):
-        """Is the user can access this board?
-        Args:
-            user_id (int): User id
-        """
-        if self.owner_id == user_id:
-            return True
-        member = self.get_board_user(user_id)
-        if not member or member.is_deleted:
-            return False
-        return True
 
     def get_board_user(self, user_id: int) -> BoardAllowedUser:
         """Gets board user.
