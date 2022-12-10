@@ -5,7 +5,7 @@ import typing
 import sqlalchemy as sqla
 import sqlalchemy.orm as sqla_orm
 
-from werkzeug.exceptions import Forbidden
+from werkzeug.exceptions import Forbidden, NotFound
 from marshmallow.exceptions import ValidationError
 
 from api.model.board import Board, BoardAllowedUser, BoardRole, BoardActivity
@@ -337,8 +337,7 @@ class BoardService:
 
         member = BoardAllowedUser.get_by_user_id(board_id, user_id)
         if not member:
-            # TODO We should raise not found.
-            pass
+            raise NotFound("Member not found")
         if current_member.id == member.id:
             raise ValidationError({"user_id": ["You can't remove yourself."]})
 

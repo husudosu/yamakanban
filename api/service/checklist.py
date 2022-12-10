@@ -218,7 +218,7 @@ class ChecklistItemService:
             # Checklist item marked
             activity = CardActivity(
                 board_user_id=current_member.id,
-                event=CardActivityEvent.CHECKLIST_ITEM_MARKED,
+                event=CardActivityEvent.CHECKLIST_ITEM_MARKED.value,
                 entity_id=item.id,
                 changes=json.dumps(
                     {
@@ -244,7 +244,7 @@ class ChecklistItemService:
         ):
             activity = CardActivity(
                 board_user_id=current_member.id,
-                event=CardActivityEvent.CHECKLIST_ITEM_USER_ASSIGN,
+                event=CardActivityEvent.CHECKLIST_ITEM_USER_ASSIGN.value,
                 entity_id=item.id,
                 changes=json.dumps(
                     {
@@ -262,7 +262,7 @@ class ChecklistItemService:
         ):
             activity = CardActivity(
                 board_user_id=current_member.id,
-                event=CardActivityEvent.CHECKLIST_ITEM_DUE_DATE,
+                event=CardActivityEvent.CHECKLIST_ITEM_DUE_DATE.value,
                 entity_id=item.id,
                 changes=json.dumps(
                     {
@@ -324,7 +324,6 @@ class ChecklistItemService:
             return item
         elif current_member.has_permission(BoardPermission.CHECKLIST_ITEM_MARK):
             # Only allow marking for member
-            # TODO: raise forbidden if there's other fields on data
             activities = self.checklist_item_process_changes(
                 current_member, item, data)
             item.update(completed=data["completed"])

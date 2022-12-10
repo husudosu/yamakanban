@@ -32,11 +32,12 @@ class SIODTO:
 class ListDTO:
     lists_schema = schemas.BoardListSchema()
     update_list_schema = schemas.BoardListSchema(exclude=("cards",))
+    list_query_schema = schemas.ArchivableEntityQuerySchema()
 
 
 class BoardDTO:
     board_schema = schemas.BoardSchema()
-    board_query_schema = schemas.BoardQuerySchema()
+    board_query_schema = schemas.ArchivableEntityQuerySchema()
     boards_schema = schemas.BoardSchema(exclude=("lists",))
     allowed_user_schema = schemas.BoardAllowedUserSchema()
     allowed_users_schema = schemas.BoardAllowedUserSchema(

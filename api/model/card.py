@@ -10,8 +10,12 @@ class CardActivity(db.Model, BaseMixin):
     """Card activity log"""
     __tablename__ = "card_activity"
     id = sqla.Column(sqla.Integer, primary_key=True)
+    board_id = sqla.Column(
+        sqla.Integer, sqla.ForeignKey("board.id", ondelete="CASCADE")
+    )
     card_id = sqla.Column(
         sqla.Integer, sqla.ForeignKey("card.id", ondelete="CASCADE"), nullable=False)
+
     board_user_id = sqla.Column(
         sqla.Integer, sqla.ForeignKey("board_allowed_user.id", ondelete="CASCADE"), nullable=False)
     activity_on = sqla.Column(
@@ -20,7 +24,7 @@ class CardActivity(db.Model, BaseMixin):
     )
 
     entity_id = sqla.Column(sqla.Integer)
-    event = sqla.Column(sqla.SmallInteger, nullable=False)  # CardActivityEvent
+    event = sqla.Column(sqla.String(255), nullable=False)  # CardActivityEvent
     changes = sqla.Column(sqla.Text, default="{}")
 
     # Card

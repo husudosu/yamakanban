@@ -3,16 +3,6 @@ import enum
 from werkzeug.exceptions import NotFound
 
 
-class RestEnum(enum.IntEnum):
-    """
-    Tuple list compatibile with Restful argparse choices.
-    """
-
-    @classmethod
-    def tuple(cls):
-        return tuple(t.value for t in cls)
-
-
 class BaseMixin(object):
 
     @classmethod
@@ -67,21 +57,22 @@ class BoardActivityEvent(enum.Enum):
     LIST_REVERT = "list.revert"
     LIST_DELETE = "list.delete"
 
+    CARD_DELETE = "card.delete"
 
-# TODO: ! Convert CardActivityEvent to enum, BE CAREFUL WE NEED SOME conversion on migration!
-class CardActivityEvent(RestEnum):
-    CARD_ASSIGN_TO_LIST = 1
-    CARD_MOVE_TO_LIST = 2
-    CARD_COMMENT = 3
-    CHECKLIST_CREATE = 4
-    CHECKLIST_UPDATE = 5
-    CHECKLIST_DELETE = 6
-    CHECKLIST_ITEM_MARKED = 7
-    CHECKLIST_ITEM_DUE_DATE = 8
-    CHECKLIST_ITEM_USER_ASSIGN = 9
 
-    CARD_ASSIGN_MEMBER = 10
-    CARD_DEASSIGN_MEMBER = 11
-    CARD_ADD_DATE = 12
-    CARD_EDIT_DATE = 13
-    CARD_DELETE_DATE = 14
+class CardActivityEvent(enum.Enum):
+    CARD_ASSIGN_TO_LIST = "card.create"
+    CARD_MOVE_TO_LIST = "card.move"
+    CARD_COMMENT = "card.comment"
+    CHECKLIST_CREATE = "checklist.create"
+    CHECKLIST_UPDATE = "checklist.update"
+    CHECKLIST_DELETE = "checklist.delete"
+    CHECKLIST_ITEM_MARKED = "checklist.item.marked"
+    CHECKLIST_ITEM_DUE_DATE = "checklist.item.due_date"
+    CHECKLIST_ITEM_USER_ASSIGN = "checklist.item.user_assign"
+
+    CARD_ASSIGN_MEMBER = "card.member.assign"
+    CARD_DEASSIGN_MEMBER = "card.member.deassign"
+    CARD_ADD_DATE = "card.date.create"
+    CARD_EDIT_DATE = "card.date.update"
+    CARD_DELETE_DATE = "card.date.delete"

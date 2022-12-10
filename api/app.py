@@ -55,7 +55,6 @@ def create_app() -> Flask:
     from .model import user
 
     migrate.init_app(app, db, render_as_batch=True)
-
     jwt.init_app(app)
 
     mail.init_app(app)

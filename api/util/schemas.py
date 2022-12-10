@@ -163,7 +163,7 @@ class BoardSchema(SQLAlchemySchema):
         model = Board
 
 
-class BoardQuerySchema(Schema):
+class ArchivableEntityQuerySchema(Schema):
     archived = fields.Boolean(missing=False)
 
 
@@ -246,7 +246,7 @@ class CardActivitySchema(SQLAlchemySchema):
     board_user_id = fields.Integer()
     activity_on = fields.DateTime("%Y-%m-%d %H:%M:%S")
     entity_id = fields.Integer()
-    event = fields.Integer(dump_only=True)
+    event = fields.String(dump_only=True)
 
     changes = fields.String(dump_only=True)
 

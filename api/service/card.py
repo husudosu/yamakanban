@@ -421,7 +421,7 @@ class MemberService:
             activity = CardActivity(
                 card_id=card.id,
                 board_user_id=current_member.id,
-                event=CardActivityEvent.CARD_ASSIGN_MEMBER,
+                event=CardActivityEvent.CARD_ASSIGN_MEMBER.value,
                 entity_id=member.id,
                 changes=json.dumps(
                     {"to": {"board_user_id": member_assignment.board_user_id}}
@@ -488,7 +488,7 @@ class MemberService:
             activity = CardActivity(
                 card_id=card.id,
                 board_user_id=current_member.id,
-                event=CardActivityEvent.CARD_DEASSIGN_MEMBER,
+                event=CardActivityEvent.CARD_DEASSIGN_MEMBER.value,
                 changes=json.dumps(
                     {"from": {"board_user_id": card_member.board_user_id}}
                 )
@@ -534,7 +534,7 @@ class DateService:
             card.dates.append(card_date)
             activity = CardActivity(
                 board_user_id=current_member.id,
-                event=CardActivityEvent.CARD_ADD_DATE,
+                event=CardActivityEvent.CARD_ADD_DATE.value,
                 entity_id=card_date.id,
                 changes=json.dumps(
                     {
@@ -589,7 +589,7 @@ class DateService:
             card_date.update(**data)
             activity = CardActivity(
                 board_user_id=current_member.id,
-                event=CardActivityEvent.CARD_EDIT_DATE,
+                event=CardActivityEvent.CARD_EDIT_DATE.value,
                 entity_id=card_date.id,
                 changes=json.dumps(
                     {
@@ -638,7 +638,7 @@ class DateService:
         if current_member.has_permission(BoardPermission.CARD_EDIT_DATE):
             activity = CardActivity(
                 board_user_id=current_member.id,
-                event=CardActivityEvent.CARD_DELETE_DATE,
+                event=CardActivityEvent.CARD_DELETE_DATE.value,
                 entity_id=card_date.id,
             )
             # Dump event before deletion
