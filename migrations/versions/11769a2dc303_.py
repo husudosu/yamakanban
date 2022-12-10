@@ -39,33 +39,33 @@ depends_on = None
 def convert_numeric_activity_event(event: int) -> str:
     """Converts old numeric CardActivityEvent into new string based."""
     match event:
-        case 1:
+        case "1":
             return "card.create"
-        case 2:
+        case "2":
             return "card.move"
-        case 3:
+        case "3":
             return "card.comment"
-        case 4:
+        case "4":
             return "checklist.create"
-        case 5:
+        case "5":
             return "checklist.update"
-        case 6:
+        case "6":
             return "checklist.delete"
-        case 7:
+        case "7":
             return "checklist.item.marked"
-        case 8:
+        case "8":
             return "checklist.item.due_date"
-        case 9:
+        case "9":
             return "checklist.item.user_assign"
-        case 10:
+        case "10":
             return "card.member.assign"
-        case 11:
+        case "11":
             return "card.member.deassign"
-        case 12:
+        case "12":
             return "card.date.create"
-        case 13:
+        case "13":
             return "card.date.update"
-        case 14:
+        case "14":
             return "card.date.delete"
     return event
 
