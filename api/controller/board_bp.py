@@ -7,7 +7,7 @@ from flask_jwt_extended import current_user, jwt_required
 from webargs.flaskparser import use_args
 
 from api.service.board import board_service
-from api.util.dto import BoardDTO
+from api.util.dto import BoardDTO, CardDTO
 
 board_bp = Blueprint("board_bp", __name__)
 
@@ -156,6 +156,19 @@ class BoardMemberActivateAPI(MethodView):
         return {}
 
 
+class BoardActvityAPI(MethodView):
+    decorators = [jwt_required(), use_args(
+        CardDTO.activity_schema_query, location="query")]
+
+    def get(self, args, board_id: int):
+        """
+        Gets BoardActvity.
+        """
+        return CardDTO.activity_paginated_schema.dump(
+            board_service.get_board_activities(current_user, board_id, args)
+        )
+
+
 board_view = BoardAPI.as_view("board-view")
 revertboard_view = RevertBoardAPI.as_view("revertboard-view")
 board_list_order_view = BoardListsOrderAPI.as_view("board-list-order-view")
@@ -165,6 +178,7 @@ board_find_member_view = BoardFindMemberAPI.as_view("board-find-member-view")
 board_member_view = BoardMemberAPI.as_view("board-member-view")
 board_member_activate_view = BoardMemberActivateAPI.as_view(
     "board-member-activate-view")
+board_actvitiy_view = BoardActvityAPI.as_view("boardactvity-view")
 
 
 board_bp.add_url_rule("/board", methods=["GET", "POST"], view_func=board_view)
@@ -194,3 +208,5 @@ board_bp.add_url_rule("/board/<board_id>/member/<user_id>",
 
 board_bp.add_url_rule("/board/member/<member_id>/activate",
                       methods=["POST"], view_func=board_member_activate_view)
+board_bp.add_url_rule("/board/<board_id>/activities",
+                      methods=["GET"], view_func=board_actvitiy_view)

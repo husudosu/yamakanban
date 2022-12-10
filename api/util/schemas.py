@@ -11,7 +11,7 @@ from api.model.board import (
 from api.model.card import Card, CardComment, CardDate
 from api.model.checklist import ChecklistItem, CardChecklist
 from api.model.list import BoardList
-from api.model.user import user
+from api.model import user
 
 
 class PaginatedSchema(Schema):

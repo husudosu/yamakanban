@@ -62,7 +62,6 @@ class CardService:
         Returns:
             Pagination: Flask sqlalchemy pagination object.
         """
-        print(args)
         card: Card = Card.get_or_404(card_id)
         # Only membership required for getting card activities.
         BoardAllowedUser.get_by_usr_or_403(card.board_id, current_user.id)

@@ -61,6 +61,50 @@ class BoardService:
             ).order_by(Card.position.asc()).all()
         return board
 
+    def get_board_activities(self, current_user: User, board_id: int, args: dict):
+        # TODO: This is almost full duplicate of Card service->get_activities method. Need refactor here!
+        Board.get_or_404(board_id)
+        BoardAllowedUser.get_by_usr_or_403(board_id, current_user.id)
+
+        query = BoardActivity.query.filter(BoardActivity.board_id == board_id)
+
+        # Get between two dates
+        if "dt_from" in args.keys() and "dt_to" in args.keys():
+            query = query.filter(
+                BoardActivity.activity_on.between(
+                    args["dt_from"],
+                    args["dt_to"]
+                )
+            )
+        elif "dt_from" in args.keys():
+            query = query.filter(
+                BoardActivity.activity_on >= args["dt_from"]
+            )
+        elif "dt_to" in args.keys():
+            query = query.filter(
+                BoardActivity.activity_on < args["dt_to"]
+            )
+
+        # Filter by user id
+        if "board_user_id" in args.keys():
+            query = query.filter(
+                BoardActivity.board_user_id == args["board_user_id"]
+            )
+
+        # Sortby
+        sortby = args.get("sort_by", "activity_on")
+        order = args.get("order", "desc")
+
+        if not hasattr(BoardActivity, sortby):
+            sortby = "activity_on"
+
+        if order == "asc":
+            query = query.order_by(sqla.asc(getattr(BoardActivity, sortby)))
+        elif order == "desc":
+            query = query.order_by(sqla.desc(getattr(BoardActivity, sortby)))
+
+        return query.paginate(args["page"], args["per_page"])
+
     def post(self, current_user: User, data: dict) -> Board:
         """Creates a new board
 

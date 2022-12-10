@@ -78,7 +78,7 @@ class ListService:
         current_member = BoardAllowedUser.get_by_usr_or_403(
             board_list.board_id, current_user.id)
         if current_member.has_permission(BoardPermission.LIST_EDIT):
-            old_title = data["title"]
+            old_title = board_list.title
             board_list.update(**data)
 
             board_list.board.activities.append(
