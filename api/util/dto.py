@@ -7,9 +7,9 @@ class CardDTO:
 
     comment_schema = schemas.CardCommentSchema()
 
-    activity_schema = schemas.CardActivitySchema()
-    activity_paginated_schema = schemas.CardActivityPaginatedSchema()
-    activity_schema_query = schemas.CardActivityQuerySchema()
+    activity_schema = schemas.BoardActivitySchema()
+    activity_paginated_schema = schemas.BoardActivityPaginatedSchema()
+    activity_schema_query = schemas.BoardActivityQuerySchema()
 
     member_schema = schemas.CardMemberSchema()
     date_schema = schemas.CardDateSchema()

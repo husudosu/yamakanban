@@ -6,15 +6,15 @@ from api.app import db
 from . import BaseMixin
 
 
-class CardActivity(db.Model, BaseMixin):
+class BoardActivity(db.Model, BaseMixin):
     """Card activity log"""
-    __tablename__ = "card_activity"
+    __tablename__ = "card_activity"  # TODO: Change this to board_activity.
     id = sqla.Column(sqla.Integer, primary_key=True)
     board_id = sqla.Column(
-        sqla.Integer, sqla.ForeignKey("board.id", ondelete="CASCADE")
+        sqla.Integer, sqla.ForeignKey("board.id", ondelete="CASCADE"), nullable=False
     )
     card_id = sqla.Column(
-        sqla.Integer, sqla.ForeignKey("card.id", ondelete="CASCADE"), nullable=False)
+        sqla.Integer, sqla.ForeignKey("card.id", ondelete="CASCADE"))
 
     board_user_id = sqla.Column(
         sqla.Integer, sqla.ForeignKey("board_allowed_user.id", ondelete="CASCADE"), nullable=False)
@@ -72,7 +72,7 @@ class CardComment(db.Model, BaseMixin):
     )
     updated = sqla.Column(sqla.DateTime)
 
-    activity = sqla_orm.relationship("CardActivity", back_populates="comment")
+    activity = sqla_orm.relationship("BoardActivity", back_populates="comment")
     board = sqla_orm.relationship("Board")
 
     def update(self, **kwargs):
@@ -123,9 +123,9 @@ class Card(db.Model, BaseMixin):
         "BoardList", back_populates="cards"
     )
     activities = sqla_orm.relationship(
-        "CardActivity", cascade="all, delete-orphan",
+        "BoardActivity", cascade="all, delete-orphan",
         back_populates="card",
-        order_by="desc(CardActivity.activity_on)",
+        order_by="desc(BoardActivity.activity_on)",
         lazy="noload",
         uselist=True
     )

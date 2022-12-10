@@ -6,13 +6,12 @@ from marshmallow import (Schema, ValidationError,
 from marshmallow_sqlalchemy import SQLAlchemySchema
 
 from api.model.board import (
-    Board, BoardAllowedUser, BoardRole, BoardRolePermission,
-    BoardActivity
+    Board, BoardAllowedUser, BoardRole, BoardRolePermission
 )
 from api.model.card import Card, CardComment, CardDate
 from api.model.checklist import ChecklistItem, CardChecklist
 from api.model.list import BoardList
-from ..model import user
+from api.model.user import user
 
 
 class PaginatedSchema(Schema):
@@ -203,19 +202,6 @@ class BoardAllowedUserSchema(SQLAlchemySchema):
         model = BoardAllowedUser
 
 
-class BoardActivitySchema(SQLAlchemySchema):
-    id = fields.Integer(dump_only=True)
-    board_id = fields.Integer(dump_only=True)
-    board_user_id = fields.Integer(dump_only=True)
-    activity_on = fields.DateTime("%Y-%m-%d %H:%M:%S", dump_only=True)
-    entity_id = fields.Integer()
-    event = fields.String(dump_only=True)
-    changes = fields.String(dump_only=True)
-
-    class Meta:
-        model = BoardActivity
-
-
 class CardMemberSchema(SQLAlchemySchema):
     id = fields.Integer(dump_only=True)
     board_user_id = fields.Integer(required=True)
@@ -240,9 +226,10 @@ class CardCommentSchema(SQLAlchemySchema):
         model = CardComment
 
 
-class CardActivitySchema(SQLAlchemySchema):
+class BoardActivitySchema(SQLAlchemySchema):
     id = fields.Integer(dump_only=True)
     card_id = fields.Integer()
+    board_id = fields.Integer()
     board_user_id = fields.Integer()
     activity_on = fields.DateTime("%Y-%m-%d %H:%M:%S")
     entity_id = fields.Integer()
@@ -259,15 +246,15 @@ class CardActivitySchema(SQLAlchemySchema):
     )
 
 
-class CardActivityPaginatedSchema(PaginatedSchema):
+class BoardActivityPaginatedSchema(PaginatedSchema):
     data = fields.Nested(
-        CardActivitySchema(),
+        BoardActivitySchema(),
         attribute="items",
         many=True
     )
 
 
-class CardActivityQuerySchema(PaginatedQuerySchema):
+class BoardActivityQuerySchema(PaginatedQuerySchema):
     type = fields.String(
         validate=validate.OneOf(["all", "comment"]), missing="comment")
 
@@ -374,7 +361,7 @@ class CardSchema(SQLAlchemySchema):
         dump_only=True
     )
     dates = fields.Nested(CardDateSchema, many=True, dump_only=True)
-    activities = fields.Nested(CardActivitySchema, many=True, dump_only=True)
+    activities = fields.Nested(BoardActivitySchema, many=True, dump_only=True)
 
     class Meta:
         model = Card

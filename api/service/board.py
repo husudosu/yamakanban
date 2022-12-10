@@ -8,8 +8,8 @@ import sqlalchemy.orm as sqla_orm
 from werkzeug.exceptions import Forbidden, NotFound
 from marshmallow.exceptions import ValidationError
 
-from api.model.board import Board, BoardAllowedUser, BoardRole, BoardActivity
-from api.model.card import Card
+from api.model.board import Board, BoardAllowedUser, BoardRole
+from api.model.card import Card, BoardActivity
 from api.model.list import BoardList
 from api.model import BoardPermission, BoardActivityEvent
 from api.app import db, socketio

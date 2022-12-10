@@ -11,7 +11,7 @@ from api.model.user import User
 
 from api.model import BoardPermission, CardActivityEvent
 from api.model.board import BoardAllowedUser
-from api.model.card import CardActivity, Card
+from api.model.card import BoardActivity, Card
 from api.model.checklist import CardChecklist, ChecklistItem
 from api.util.dto import ChecklistDTO, SIODTO, CardDTO
 from api.socket import SIOEvent
@@ -37,7 +37,9 @@ class ChecklistService:
             )
 
             # Card activity
-            activity = CardActivity(
+            activity = BoardActivity(
+                card_id=card.id,
+                board_id=card.board_id,
                 board_user_id=current_member.id,
                 event=CardActivityEvent.CHECKLIST_CREATE.value,
                 entity_id=card.id,
@@ -111,7 +113,9 @@ class ChecklistService:
 
             db.session.delete(checklist)
 
-            activity = CardActivity(
+            activity = BoardActivity(
+                card_id=checklist.card_id,
+                board_id=checklist.board_id,
                 board_user_id=current_member.id,
                 event=CardActivityEvent.CHECKLIST_DELETE.value
             )
@@ -201,7 +205,7 @@ class ChecklistItemService:
     def checklist_item_process_changes(
         self,
         current_member: BoardAllowedUser, item: ChecklistItem, data: dict
-    ) -> typing.List[CardActivity]:
+    ) -> typing.List[BoardActivity]:
         """Processes data changes of checklist item, creates card activities
         based on data changes.
 
@@ -216,7 +220,9 @@ class ChecklistItemService:
             data["completed"] != item.completed
         ):
             # Checklist item marked
-            activity = CardActivity(
+            activity = BoardActivity(
+                card_id=item.checklist.card_id,
+                board_id=item.board_id,
                 board_user_id=current_member.id,
                 event=CardActivityEvent.CHECKLIST_ITEM_MARKED.value,
                 entity_id=item.id,
@@ -242,7 +248,9 @@ class ChecklistItemService:
             data.get("assigned_board_user_id") is not None and
             data["assigned_board_user_id"] != item.assigned_board_user_id
         ):
-            activity = CardActivity(
+            activity = BoardActivity(
+                card_id=item.checklist.card_id,
+                board_id=item.board_id,
                 board_user_id=current_member.id,
                 event=CardActivityEvent.CHECKLIST_ITEM_USER_ASSIGN.value,
                 entity_id=item.id,
@@ -260,7 +268,9 @@ class ChecklistItemService:
             data.get("due_date") is not None and
             data["due_date"] != item.due_date
         ):
-            activity = CardActivity(
+            activity = BoardActivity(
+                card_id=item.checklist.card_id,
+                board_id=item.board_id,
                 board_user_id=current_member.id,
                 event=CardActivityEvent.CHECKLIST_ITEM_DUE_DATE.value,
                 entity_id=item.id,

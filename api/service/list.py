@@ -6,9 +6,9 @@ from werkzeug.exceptions import Forbidden
 from api.app import db, socketio
 from api.model import BoardPermission, BoardActivityEvent
 from api.model.user import User
-from api.model.board import BoardAllowedUser, Board, BoardActivity
+from api.model.board import BoardAllowedUser, Board
 from api.model.list import BoardList
-from api.model.card import Card
+from api.model.card import Card, BoardActivity
 from api.socket import SIOEvent
 
 from api.util.dto import ListDTO
@@ -119,7 +119,6 @@ class ListService:
                 board_list.archived = True
                 board_list.archived_on = datetime.utcnow()
             else:
-                
                 db.session.delete(board_list)
 
             db.session.commit()

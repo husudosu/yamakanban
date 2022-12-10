@@ -8,7 +8,7 @@ from flask_sqlalchemy import Pagination
 from api.app import db, socketio
 
 from api.model.user import User
-from api.model.card import Card, CardActivity, CardComment, CardMember, CardDate
+from api.model.card import Card, BoardActivity, CardComment, CardMember, CardDate
 from api.model import BoardPermission, CardActivityEvent
 from api.model.board import BoardAllowedUser
 from api.model.list import BoardList
@@ -43,10 +43,10 @@ class CardService:
         BoardAllowedUser.get_by_usr_or_403(card.board_id, current_user.id)
 
         # Load card activities
-        card.activities = CardActivity.query.filter(
-            CardActivity.card_id == card.id
+        card.activities = BoardActivity.query.filter(
+            BoardActivity.card_id == card.id
         ).order_by(
-            sqla.desc(CardActivity.activity_on)
+            sqla.desc(BoardActivity.activity_on)
         ).limit(args["activity_count"]).all()
 
         return card
@@ -68,47 +68,47 @@ class CardService:
         BoardAllowedUser.get_by_usr_or_403(card.board_id, current_user.id)
 
         # Query and paginate
-        query = CardActivity.query.filter(CardActivity.card_id == card_id)
+        query = BoardActivity.query.filter(BoardActivity.card_id == card_id)
 
         # Checks type
         if args["type"] == "comment":
             query = query.filter(
-                CardActivity.event == CardActivityEvent.CARD_COMMENT.value)
+                BoardActivity.event == CardActivityEvent.CARD_COMMENT.value)
 
         # Get between two dates
         if "dt_from" in args.keys() and "dt_to" in args.keys():
             query = query.filter(
-                CardActivity.activity_on.between(
+                BoardActivity.activity_on.between(
                     args["dt_from"],
                     args["dt_to"]
                 )
             )
         elif "dt_from" in args.keys():
             query = query.filter(
-                CardActivity.activity_on >= args["dt_from"]
+                BoardActivity.activity_on >= args["dt_from"]
             )
         elif "dt_to" in args.keys():
             query = query.filter(
-                CardActivity.activity_on < args["dt_to"]
+                BoardActivity.activity_on < args["dt_to"]
             )
 
         # Filter by user id
         if "board_user_id" in args.keys():
             query = query.filter(
-                CardActivity.board_user_id == args["board_user_id"]
+                BoardActivity.board_user_id == args["board_user_id"]
             )
 
         # Sortby
         sortby = args.get("sort_by", "activity_on")
         order = args.get("order", "desc")
 
-        if not hasattr(CardActivity, sortby):
+        if not hasattr(BoardActivity, sortby):
             sortby = "activity_on"
 
         if order == "asc":
-            query = query.order_by(sqla.asc(getattr(CardActivity, sortby)))
+            query = query.order_by(sqla.asc(getattr(BoardActivity, sortby)))
         elif order == "desc":
-            query = query.order_by(sqla.desc(getattr(CardActivity, sortby)))
+            query = query.order_by(sqla.desc(getattr(BoardActivity, sortby)))
 
         return query.paginate(args["page"], args["per_page"])
 
@@ -192,7 +192,9 @@ class CardService:
                         raise ValidationError(
                             {"list_id": ["Cannot move card to other board!"]})
 
-                    activity = CardActivity(
+                    activity = BoardActivity(
+                        card_id=card.id,
+                        board_id=card.board_id,
                         board_user_id=current_member.id,
                         event=CardActivityEvent.CARD_MOVE_TO_LIST.value,
                         entity_id=card.id,
@@ -286,7 +288,7 @@ class CommentService:
     Contains business logic for Card comment.
     """
 
-    def post(self, current_user: User, card_id: int, data: dict) -> CardActivity:
+    def post(self, current_user: User, card_id: int, data: dict) -> BoardActivity:
         """Creates a card comment
 
         Args:
@@ -310,7 +312,9 @@ class CommentService:
                 board_id=card.board_id,
                 **data
             )
-            activity = CardActivity(
+            activity = BoardActivity(
+                card_id=card.id,
+                board_id=card.board_id,
                 board_user_id=current_member.id,
                 event=CardActivityEvent.CARD_COMMENT.value,
                 entity_id=comment.id,
@@ -418,8 +422,9 @@ class MemberService:
             card.assigned_members.append(member_assignment)
 
             # Add card activity
-            activity = CardActivity(
+            activity = BoardActivity(
                 card_id=card.id,
+                board_id=card.board_id,
                 board_user_id=current_member.id,
                 event=CardActivityEvent.CARD_ASSIGN_MEMBER.value,
                 entity_id=member.id,
@@ -453,7 +458,7 @@ class MemberService:
             return member_assignment
         raise Forbidden()
 
-    def delete(self, current_user: User, card_id: int, card_member_id: int) -> CardActivity:
+    def delete(self, current_user: User, card_id: int, card_member_id: int) -> BoardActivity:
         """Deassigns card member.
 
         Args:
@@ -485,8 +490,9 @@ class MemberService:
             entity_id = card_member.id
 
             # Add activity to card
-            activity = CardActivity(
+            activity = BoardActivity(
                 card_id=card.id,
+                board_id=card.board_id,
                 board_user_id=current_member.id,
                 event=CardActivityEvent.CARD_DEASSIGN_MEMBER.value,
                 changes=json.dumps(
@@ -532,7 +538,9 @@ class DateService:
         if current_member.has_permission(BoardPermission.CARD_ADD_DATE):
             card_date = CardDate(board_id=card.board_id, **data)
             card.dates.append(card_date)
-            activity = CardActivity(
+            activity = BoardActivity(
+                card_id=card.id,
+                board_id=card.board_id,
                 board_user_id=current_member.id,
                 event=CardActivityEvent.CARD_ADD_DATE.value,
                 entity_id=card_date.id,
@@ -587,7 +595,9 @@ class DateService:
 
         if current_member.has_permission(BoardPermission.CARD_EDIT_DATE):
             card_date.update(**data)
-            activity = CardActivity(
+            activity = BoardActivity(
+                card_id=card_date.card_id,
+                board_id=card_date.board_id,
                 board_user_id=current_member.id,
                 event=CardActivityEvent.CARD_EDIT_DATE.value,
                 entity_id=card_date.id,
@@ -618,7 +628,7 @@ class DateService:
             return card_date
         raise Forbidden()
 
-    def delete(self, current_user: User, date_id: int) -> CardActivity:
+    def delete(self, current_user: User, date_id: int) -> BoardActivity:
         """Delete card date.
 
         Args:
@@ -636,7 +646,9 @@ class DateService:
             card_date.board_id, current_user.id)
 
         if current_member.has_permission(BoardPermission.CARD_EDIT_DATE):
-            activity = CardActivity(
+            activity = BoardActivity(
+                card_id=card_date.id,
+                board_id=card_date.board_id,
                 board_user_id=current_member.id,
                 event=CardActivityEvent.CARD_DELETE_DATE.value,
                 entity_id=card_date.id,
