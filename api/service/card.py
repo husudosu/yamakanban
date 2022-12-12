@@ -147,6 +147,23 @@ class CardService:
             db.session.add(card)
             db.session.commit()
 
+            card.activities.append(
+                BoardActivity(
+                    card_id=card.id,
+                    board_id=card.board_id,
+                    board_user_id=current_member.id,
+                    event=CardActivityEvent.CARD_ASSIGN_TO_LIST.value,
+                    changes=json.dumps(
+                        {
+                            "to": {
+                                "title": card.title,
+                                "list_title": card.board_list.title
+                            }
+                        }
+                    )
+                )
+            )
+            db.session.commit()
             socketio.emit(
                 SIOEvent.CARD_NEW.value,
                 CardDTO.card_schema.dump(card),
@@ -261,6 +278,16 @@ class CardService:
             if not card.archived:
                 card.archived = True
                 card.archived_on = datetime.utcnow()
+
+                card.activities.append(
+                    BoardActivity(
+                        card_id=card.id,
+                        board_id=card.board_id,
+                        board_user_id=current_member.id,
+                        event=CardActivityEvent.CARD_ARCHIVE.value,
+                        entity_id=card.id,
+                    )
+                )
             else:
                 db.session.delete(card)
             db.session.commit()

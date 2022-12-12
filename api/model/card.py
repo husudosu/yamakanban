@@ -140,5 +140,8 @@ class Card(db.Model, BaseMixin):
         order_by="asc(CardDate.dt_to)",
         back_populates="card"
     )
+    board_list = sqla_orm.relationship(
+        "BoardList", back_populates="cards"
+    )
 
     board = sqla_orm.relationship("Board")

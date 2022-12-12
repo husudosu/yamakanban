@@ -352,7 +352,7 @@ class CardSchema(SQLAlchemySchema):
     description = fields.String(allow_none=True)
     position = fields.Integer()
 
-    archived = fields.Boolean(dump_only=True)
+    archived = fields.Boolean()
     archived_on = fields.DateTime("%Y-%m-%d %H:%M:%S", dump_only=True)
 
     checklists = fields.Nested(CardChecklistSchema, many=True, dump_only=True)

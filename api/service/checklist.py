@@ -110,14 +110,19 @@ class ChecklistService:
                 "list_id": checklist.card.list_id,
                 "entity_id": checklist.id
             })
-
+            title = checklist.title
             db.session.delete(checklist)
 
             activity = BoardActivity(
                 card_id=checklist.card_id,
                 board_id=checklist.board_id,
                 board_user_id=current_member.id,
-                event=CardActivityEvent.CHECKLIST_DELETE.value
+                event=CardActivityEvent.CHECKLIST_DELETE.value,
+                changes=json.dumps({
+                    "to": {
+                        "title": title
+                    }
+                })
             )
 
             checklist.card.activities.append(activity)
