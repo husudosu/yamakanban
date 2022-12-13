@@ -16,7 +16,6 @@ class Config:
     SECRET_KEY = os.environ.get("SECRET_KEY", "secret_key")
 
     # SQLAlchemy settings
-    # SQLALCHEMY_DATABASE_URI = "sqlite:///test.db"
     SQLALCHEMY_DATABASE_URI = \
         f"postgresql://{os.environ.get('POSTGRES_USER')}:{os.environ.get('POSTGRES_PASSWORD')}@{os.environ.get('POSTGRES_HOST')}/{os.environ.get('POSTGRES_DB')}"
     SQLALCHEMY_TRACK_MODIFICATIONS = False

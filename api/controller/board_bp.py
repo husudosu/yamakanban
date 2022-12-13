@@ -169,6 +169,21 @@ class BoardActvityAPI(MethodView):
         )
 
 
+class ArchivedEntitiesAPI(MethodView):
+    decorators = [jwt_required(), use_args(
+        BoardDTO.archived_entities_query_schema, location="query"
+    )]
+
+    def get(self, args, board_id: int):
+        """
+        Gets ArchivedEntities.
+        """
+        return jsonify(BoardDTO.archivied_entity_schema.dump(
+            board_service.get_archived_entitities(
+                current_user, board_id, args
+            ), many=True))
+
+
 board_view = BoardAPI.as_view("board-view")
 revertboard_view = RevertBoardAPI.as_view("revertboard-view")
 board_list_order_view = BoardListsOrderAPI.as_view("board-list-order-view")
@@ -179,6 +194,7 @@ board_member_view = BoardMemberAPI.as_view("board-member-view")
 board_member_activate_view = BoardMemberActivateAPI.as_view(
     "board-member-activate-view")
 board_actvitiy_view = BoardActvityAPI.as_view("boardactvity-view")
+archivedentities_view = ArchivedEntitiesAPI.as_view("archivedentities-view")
 
 
 board_bp.add_url_rule("/board", methods=["GET", "POST"], view_func=board_view)
@@ -210,3 +226,5 @@ board_bp.add_url_rule("/board/member/<member_id>/activate",
                       methods=["POST"], view_func=board_member_activate_view)
 board_bp.add_url_rule("/board/<board_id>/activities",
                       methods=["GET"], view_func=board_actvitiy_view)
+board_bp.add_url_rule("/board/<board_id>/archived-entities",
+                      view_func=archivedentities_view, methods=["GET"])

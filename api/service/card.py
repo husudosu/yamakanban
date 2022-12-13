@@ -230,6 +230,54 @@ class CardService:
                     card.activities.append(activity)
                     card.list_id = value
                     activities.append(activity)
+                elif key == "archived" and card.archived != value:
+                    if value is False:
+                        activity = BoardActivity(
+                            card_id=card.id,
+                            board_id=card.board_id,
+                            board_user_id=current_member.id,
+                            event=CardActivityEvent.CARD_REVERT.value,
+                            entity_id=card.id,
+                        )
+                        card.activities.append(activity)
+                        card.archived_on = None
+                        # Send new card activity to client socket io
+                        socketio.emit(
+                            SIOEvent.CARD_NEW.value,
+                            CardDTO.card_schema.dump(card),
+                            namespace="/board",
+                            to=f"board-{card.board_id}"
+                        )
+                        activities.append(activity)
+                    else:
+                        # This code same as on delete method
+                        card.archived = True
+                        card.archived_on = datetime.utcnow()
+
+                        card.activities.append(
+                            BoardActivity(
+                                card_id=card.id,
+                                board_id=card.board_id,
+                                board_user_id=current_member.id,
+                                event=CardActivityEvent.CARD_ARCHIVE.value,
+                                entity_id=card.id,
+                            )
+                        )
+                        activities.append(activity)
+                        socketio.emit(
+                            SIOEvent.CARD_DELETE.value,
+                            SIODTO.delete_event_scehma.dump(
+                                {
+                                    "list_id": card.list_id,
+                                    "card_id": card.id,
+                                    "entity_id": card.id,
+                                }
+                            ),
+                            namespace="/board",
+                            to=f"board-{card.board_id}"
+                        )
+
+                    card.archived = value
                 elif hasattr(card, key):
                     setattr(card, key, value)
 
@@ -288,22 +336,22 @@ class CardService:
                         entity_id=card.id,
                     )
                 )
+                # Only send CARD_DELETE SIO event.
+                socketio.emit(
+                    SIOEvent.CARD_DELETE.value,
+                    SIODTO.delete_event_scehma.dump(
+                        {
+                            "list_id": list_id,
+                            "card_id": card_id,
+                            "entity_id": card_id,
+                        }
+                    ),
+                    namespace="/board",
+                    to=f"board-{card.board_id}"
+                )
             else:
                 db.session.delete(card)
             db.session.commit()
-
-            socketio.emit(
-                SIOEvent.CARD_DELETE.value,
-                SIODTO.delete_event_scehma.dump(
-                    {
-                        "list_id": list_id,
-                        "card_id": card_id,
-                        "entity_id": card_id,
-                    }
-                ),
-                namespace="/board",
-                to=f"board-{card.board_id}"
-            )
 
         else:
             raise Forbidden()

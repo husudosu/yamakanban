@@ -43,3 +43,5 @@ class BoardDTO:
     allowed_users_schema = schemas.BoardAllowedUserSchema(
         exclude=("role.permissions",))
     roles_schema = schemas.BoardRoleSchema()
+    archived_entities_query_schema = schemas.ArchivedEntititiesQuerySchema()
+    archivied_entity_schema = schemas.ArchivedEntitySchema()

@@ -105,6 +105,27 @@ class BoardService:
 
         return query.paginate(args["page"], args["per_page"])
 
+    def get_archived_entitities(self, current_user: User, board_id: int, args: dict):
+        entity_type = args.get("entity_type")
+        Board.get_or_404(board_id)
+        BoardAllowedUser.get_by_usr_or_403(board_id, current_user.id)
+        match entity_type:
+            case "card":
+                return Card.query.filter(
+                    sqla.and_(
+                        Card.board_id == board_id,
+                        Card.archived == True
+                    )
+                ).all()
+            case "list":
+                return BoardList.query.filter(
+                    sqla.and_(
+                        BoardList.board_id == board_id,
+                        BoardList.archived == True
+                    )
+                )
+        return []
+
     def post(self, current_user: User, data: dict) -> Board:
         """Creates a new board
 

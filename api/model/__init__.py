@@ -65,6 +65,7 @@ class CardActivityEvent(enum.Enum):
     CARD_MOVE_TO_LIST = "card.move"
     CARD_COMMENT = "card.comment"
     CARD_ARCHIVE = "card.archive"
+    CARD_REVERT = "card.revert"
 
     CHECKLIST_CREATE = "checklist.create"
     CHECKLIST_UPDATE = "checklist.update"
