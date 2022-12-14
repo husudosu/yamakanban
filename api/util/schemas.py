@@ -393,7 +393,7 @@ class SIOCheckListEventSchema(SIOEventSchema):
 
 
 class ArchivedEntititiesQuerySchema(Schema):
-    entity_type = fields.String(validate=validate.OneOf("card", "list"))
+    entity_type = fields.String(validate=validate.OneOf(("card", "list",)))
 
 
 class ArchivedEntitySchema(Schema):
