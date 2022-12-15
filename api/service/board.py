@@ -123,9 +123,7 @@ class BoardService:
                         BoardList.board_id == board_id,
                         BoardList.archived == True
                     )
-                ).all()
-        raise ValidationError(
-            {"entity_type": ["Entity type required as query parameter!"]})
+                ).options(sqla_orm.joinedload(BoardList.cards)).all()
 
     def post(self, current_user: User, data: dict) -> Board:
         """Creates a new board

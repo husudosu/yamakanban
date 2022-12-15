@@ -44,4 +44,11 @@ class BoardDTO:
         exclude=("role.permissions",))
     roles_schema = schemas.BoardRoleSchema()
     archived_entities_query_schema = schemas.ArchivedEntititiesQuerySchema()
+    # FIXME: Archived entity schema should be depcreated
     archivied_entity_schema = schemas.ArchivedEntitySchema()
+
+    archived_cards_schema = schemas.CardSchema(only=(
+        "id", "title", "archived_on", "board_list.title", "board_list.id", "board_list.archived",))
+    archived_lists_schema = schemas.BoardListSchema(only=(
+        "id", "title", "archived_on", "cards.id", "cards.title",
+    ))

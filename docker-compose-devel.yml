@@ -4,7 +4,6 @@ services:
         image: postgres
         hostname: todoman_db
         container_name: todoman_db
-        restart: unless-stopped
         volumes:
             - sql:/var/lib/postgresql/data
         env_file:

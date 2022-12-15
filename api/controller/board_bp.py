@@ -5,6 +5,7 @@ from flask import Blueprint, request, abort, jsonify
 from flask.views import MethodView
 from flask_jwt_extended import current_user, jwt_required
 from webargs.flaskparser import use_args
+from marshmallow.exceptions import ValidationError
 
 from api.service.board import board_service
 from api.util.dto import BoardDTO, CardDTO
@@ -178,10 +179,18 @@ class ArchivedEntitiesAPI(MethodView):
         """
         Gets ArchivedEntities.
         """
-        return jsonify(BoardDTO.archivied_entity_schema.dump(
-            board_service.get_archived_entitities(
-                current_user, board_id, args
-            ), many=True))
+        if args.get("entity_type") == "card":
+            return jsonify(BoardDTO.archived_cards_schema.dump(
+                board_service.get_archived_entitities(
+                    current_user, board_id, args
+                ), many=True))
+        elif args.get("entity_type") == "list":
+            return jsonify(BoardDTO.archived_lists_schema.dump(
+                board_service.get_archived_entitities(
+                    current_user, board_id, args
+                ), many=True))
+        raise ValidationError(
+            {"entity_type": ["Entity type required as query parameter!"]})
 
 
 board_view = BoardAPI.as_view("board-view")
