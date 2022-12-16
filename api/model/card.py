@@ -117,6 +117,8 @@ class Card(db.Model, BaseMixin):
     position = sqla.Column(sqla.SmallInteger, default=0)
 
     archived = sqla.Column(sqla.Boolean, server_default="0", default=False)
+    archived_by_list = sqla.Column(
+        sqla.Boolean, server_default="0", default=False)
     archived_on = sqla.Column(sqla.DateTime)
 
     board_list = sqla_orm.relationship(

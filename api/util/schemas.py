@@ -130,7 +130,7 @@ class BoardListSchema(SQLAlchemySchema):
     title = fields.String(required=True)
     position = fields.Integer()
 
-    archived = fields.Boolean(dump_only=True)
+    archived = fields.Boolean()
     archived_on = fields.DateTime("%Y-%m-%d %H:%M:%S", dump_only=True)
 
     cards = fields.Nested(
@@ -353,6 +353,8 @@ class CardSchema(SQLAlchemySchema):
     position = fields.Integer()
 
     archived = fields.Boolean()
+    archived_by_list = fields.Boolean(dump_only=True)
+
     archived_on = fields.DateTime("%Y-%m-%d %H:%M:%S", dump_only=True)
 
     checklists = fields.Nested(CardChecklistSchema, many=True, dump_only=True)
@@ -399,9 +401,3 @@ class SIOCheckListEventSchema(SIOEventSchema):
 
 class ArchivedEntititiesQuerySchema(Schema):
     entity_type = fields.String(validate=validate.OneOf(("card", "list",)))
-
-
-class ArchivedEntitySchema(Schema):
-    id = fields.Integer()
-    title = fields.String()
-    archived_on = fields.DateTime("%Y-%m-%d %H:%M:%S")

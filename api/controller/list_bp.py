@@ -25,7 +25,7 @@ class ListAPI(MethodView):
     def patch(self, list_id: int):
         return ListDTO.update_list_schema.dump(
             list_service.patch(current_user, list_id,
-                               ListDTO.update_list_schema.load(request.json))
+                               ListDTO.update_list_schema.load(request.json, partial=True))
         )
 
     def delete(self, list_id: int):

@@ -114,7 +114,10 @@ class BoardService:
                 return Card.query.filter(
                     sqla.and_(
                         Card.board_id == board_id,
-                        Card.archived == True
+                        sqla.or_(
+                            Card.archived == True,
+                            Card.archived_by_list == True
+                        )
                     )
                 ).all()
             case "list":
