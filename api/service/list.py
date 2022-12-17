@@ -94,8 +94,11 @@ class ListService:
 
         # Update archived state on cards
         db.session.query(Card).filter(
-            Card.list_id == board_list.id
-        ).update({"archived_by_list": True})
+            sqla.and_(
+                Card.list_id == board_list.id,
+                Card.archived == False
+            )
+        ).update({"archived_by_list": True, "archived_on": datetime.utcnow()})
 
         db.session.commit()
 
@@ -126,8 +129,11 @@ class ListService:
         board_list.archived_on = None
         # Update archived state on cards
         db.session.query(Card).filter(
-            Card.list_id == board_list.id
-        ).update({"archived_by_list": False})
+            sqla.and_(
+                Card.list_id == board_list.id,
+                Card.archived == False
+            )
+        ).update({"archived_by_list": False, "archived_on": None})
         db.session.commit()
 
         # Load cards into boardlist
