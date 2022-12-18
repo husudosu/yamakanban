@@ -10,7 +10,6 @@ from flask_jwt_extended import (
 from datetime import timedelta
 
 from api.app import db
-from api.mail_middleware import send_async_email
 from api.util.dto import UserDTO
 from api.model.user import User, TokenBlocklist
 

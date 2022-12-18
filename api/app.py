@@ -5,7 +5,7 @@ from datetime import datetime, timezone, timedelta
 from werkzeug.exceptions import HTTPException
 import json
 
-from flask import Blueprint, Flask, Response
+from flask import Blueprint, Flask, Response, make_response, jsonify
 from flask.cli import AppGroup
 
 from flask_cors import CORS
@@ -14,6 +14,7 @@ from flask_migrate import Migrate
 from flask_jwt_extended import (
     JWTManager, get_jwt, create_access_token,
     get_jwt_identity, set_access_cookies,
+    current_user, unset_jwt_cookies
 )
 from jwt import ExpiredSignatureError
 from flask_mail import Mail
@@ -104,6 +105,12 @@ def create_app() -> Flask:
             user.TokenBlocklist.id).filter_by(jti=jti).scalar()
         return token is not None
 
+    @jwt.expired_token_loader
+    def expired_token_callback(jwt_header, jwt_payload):
+        resp = make_response(jsonify({"message": "Token expired"}), 401)
+        unset_jwt_cookies(resp)
+        return resp
+
     @app.before_first_request
     def before_first_request():
         from api.model.board import check_permission_integrity
@@ -129,21 +136,14 @@ def create_app() -> Flask:
     @app.after_request
     def refresh_expiring_jwts(response):
         try:
-            """
-            FIXME: Very hacky way to handle logout. 
-            """
+            # FIXME: Very hacky way to handle logout.
             if "Token revoked" in str(response.get_data()):
                 return response
             exp_timestamp = get_jwt()["exp"]
             now = datetime.now(timezone.utc)
             target_timestamp = datetime.timestamp(now + timedelta(minutes=30))
             if target_timestamp > exp_timestamp:
-                # FIXME: Need better solution for getting user object.
-                access_token = create_access_token(
-                    identity=user.User.query.filter(
-                        user.User.id == get_jwt_identity()
-                    ).one_or_none()
-                )
+                access_token = create_access_token(identity=current_user)
                 set_access_cookies(response, access_token)
             return response
         except (RuntimeError, KeyError):
