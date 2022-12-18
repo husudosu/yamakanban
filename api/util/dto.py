@@ -50,3 +50,26 @@ class BoardDTO:
     archived_lists_schema = schemas.BoardListSchema(only=(
         "id", "title", "archived_on", "cards.id", "cards.title",
     ))
+
+
+class UserDTO:
+    user_schema = schemas.UserSchema()
+    register_schema = schemas.UserSchema(
+        partial=("username", "password", "email",),
+        exclude=("roles",)
+    )
+    update_user_schema = schemas.UserSchema(
+        partial=("username", "password", "email",),
+        exclude=("roles",)
+    )
+    update_user_schema_admin = schemas.UserSchema(
+        partial=True, exclude=("current_password",))
+    guest_user_schema = schemas.UserSchema(
+        only=(
+            "id", "username", "name",
+            "avatar_url", "timezone",
+            "roles",
+        )
+    )
+    reset_password_schema = schemas.ResetPasswordSchema()
+    login_schema = schemas.LoginSchema()

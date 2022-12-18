@@ -59,10 +59,5 @@ class Config:
     COMPRESS_LEVEL = 6
     COMPRESS_MIN_SIZE = 500
 
-    # Allow anonymous to look users.
-    VIEW_USER_AS_ANONYMOUS = False
-    # Users allowed to view each other profile
-    ALLOW_TO_VIEW_OTHER_USER = True
-
     DEFAULT_TIMEZONE = os.environ.get("DEFAULT_TIMEZONE", "Europe/Budapest")
     PROFILER_ENABLED = strtobool(os.environ.get("PROFILER_ENABLED", "0"))

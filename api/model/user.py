@@ -9,7 +9,7 @@ from flask import current_app
 
 from . import BaseMixin
 
-from ..app import db
+from api.app import db
 
 
 class TokenBlocklist(db.Model):
@@ -20,8 +20,20 @@ class TokenBlocklist(db.Model):
 
     jti = sqla.Column(sqla.String(36), nullable=False, index=True)
     created_at = sqla.Column(sqla.DateTime, nullable=False)
-    type = db.Column(db.String(16), nullable=False,
-                     server_default="access_token")
+    type = sqla.Column(db.String(16), nullable=False,
+                       server_default="access_token")
+
+    @classmethod
+    def revoke_token(cls, current_user, token):
+        db.session.add(
+            cls(
+                user_id=current_user.id,
+                jti=token["jti"],
+                type=token["type"],
+                created_at=datetime.now()
+            )
+        )
+        db.session.commit()
 
 
 class Role(db.Model):
@@ -37,7 +49,7 @@ class Role(db.Model):
         Args:
             role (str): Role name
 
-        Returns:
+        Returns: 
             Role: Role object
         """
         obj = cls.query.filter(cls.name == role).first()
@@ -76,6 +88,8 @@ class User(db.Model, BaseMixin):
     email = sqla.Column(sqla.String(255), nullable=False, unique=True)
     password = sqla.Column(sqla.String(255), nullable=False)
     avatar_url = sqla.Column(sqla.Text)
+    archived = sqla.Column(sqla.Boolean, default=False,
+                           server_default="0", nullable=False)
 
     registered_date = sqla.Column(sqla.DateTime, default=datetime.now)
 
@@ -96,6 +110,17 @@ class User(db.Model, BaseMixin):
 
     def check_password(self, password):
         return check_password_hash(self.password, password)
+
+    def update_login_history(self, remote_addr: str):
+        """Updates data after successfull login like login_date and login_ip"""
+        if self.current_login_at:
+            self.last_login_at = self.current_login_at
+        self.current_login_at = datetime.now()
+
+        if self.current_login_ip:
+            self.last_login_ip = self.current_login_ip
+        self.current_login_ip = remote_addr
+        db.session.commit()
 
     @classmethod
     def find_user(cls, user_or_mail: str):

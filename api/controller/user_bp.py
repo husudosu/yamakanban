@@ -1,8 +1,5 @@
-from datetime import datetime
-from flask import (
-    jsonify, make_response, render_template,
-    request, Blueprint, current_app, abort
-)
+from flask import Blueprint, request, current_app, make_response, jsonify, abort, render_template
+from flask.views import MethodView
 from flask_jwt_extended import (
     create_access_token, jwt_required,
     get_jwt, current_user, verify_jwt_in_request,
@@ -10,287 +7,251 @@ from flask_jwt_extended import (
     set_access_cookies, set_refresh_cookies,
     unset_jwt_cookies
 )
-import werkzeug.exceptions as we
-
-from ..app import db
-from ..model.user import TokenBlocklist, User
-from ..util.schemas import ResetPasswordSchema, UserSchema
-from ..mail_middleware import send_async_email
 from datetime import timedelta
+
+from api.app import db
+from api.mail_middleware import send_async_email
+from api.util.dto import UserDTO
+from api.model.user import User, TokenBlocklist
+
 
 user_bp = Blueprint("user_bp", __name__, url_prefix="/auth")
 
-user_schema = UserSchema()
-guest_user_schema = UserSchema(
-    only=(
-        "id", "username", "name",
-        "avatar_url", "timezone",
-        "roles",
-    )
-)
-update_user_schema = UserSchema(
-    # FIXME: Dont't know why name field needed here, name required is False!
-    partial=("username", "password", "email",),
-    exclude=("roles",)
-)
-register_user_schema = UserSchema(
-    exclude=("current_password", "roles",)
-)
-update_user_schema_admin = UserSchema(
-    partial=True, exclude=("current_password",))
-reset_password_schema = ResetPasswordSchema()
 
-
-@user_bp.route("/login", methods=["POST"])
-def login():
-    username = request.json.get("username", None)
-    password = request.json.get("password", None)
-    remember_me = request.json.get("remember_me", False)
-    usr = User.find_user(username)
-
-    if not usr or not usr.check_password(password):
-        raise we.Unauthorized("Invalid username/password!")
-
-    additional_claims = {
+def create_additional_claims(usr: User):
+    return {
         "username": usr.username,
         "email": usr.email,
         "roles": [role.name for role in usr.roles],
         "name": usr.name
     }
-    access_token = create_access_token(
-        identity=usr,
-        additional_claims=additional_claims,
-        expires_delta=current_app.config["JWT_ACCESS_TOKEN_EXPIRES"] if not remember_me else timedelta(
-            days=365)
-    )
-    refresh_token = create_refresh_token(
-        identity=usr,
-        expires_delta=current_app.config["JWT_REFRESH_TOKEN_EXPIRES"] if not remember_me else timedelta(
-            days=730)
-    )
-
-    # Update login history
-    if usr.current_login_at:
-        usr.last_login_at = usr.current_login_at
-    usr.current_login_at = datetime.now()
-
-    if usr.current_login_ip:
-        usr.last_login_ip = usr.current_login_ip
-    usr.current_login_ip = request.remote_addr
-
-    db.session.commit()
-
-    # Create response and set cookies
-    resp = make_response(
-        jsonify(access_token=access_token, refresh_token=refresh_token))
-    set_access_cookies(resp, access_token)
-    set_refresh_cookies(resp, refresh_token)
-    return resp
 
 
-@user_bp.route("/me", methods=["GET"])
-@jwt_required()
-def get_user_claims():
-    return {
-        "id": current_user.id,
-        "username": current_user.username,
-        "email": current_user.email,
-        "roles": [role.name for role in current_user.roles],
-        "name": current_user.name,
-        "timezone": current_user.timezone
-    }
+class LoginAPI(MethodView):
+    decorators = [jwt_required(optional=True)]
 
+    def post(self):
+        """
+        Create Login.
+        """
+        if current_user:
+            abort(400, "Already logged in!")
 
-@user_bp.route("/register", methods=["POST"])
-def register():
-    data = register_user_schema.load(request.json)
-    usr = User.create(**data)
+        login = UserDTO.login_schema.load(request.json)
+        usr: User = User.find_user(login["username"])
 
-    # Assign default role
-    usr.assign_role("user")
+        if not usr or not usr.check_password(login["password"]):
+            abort(401, "Invalid username/password")
+        if usr.archived:
+            abort(401, "Your user has been archived!")
 
-    db.session.add(usr)
-    db.session.commit()
-
-    return user_schema.dump(usr)
-
-
-@user_bp.route("/forgot-password", methods=["POST"])
-def forgot_password():
-    if not request.json.get("username"):
-        raise we.BadRequest("Username/e-mail missing!")
-
-    usr = User.find_user(request.json["username"])
-    if not usr:
-        raise we.BadRequest("User not found.")
-    reset_token = create_access_token(
-        identity=usr,
-        expires_delta=current_app.config["RESET_PASSWORD_TOKEN_EXPIRES"]
-    )
-    send_async_email(
-        subject="[JWT Auth] reset password requested",
-        sender="husudosu94@gmail.com",
-        recipients=[usr.email],
-        text_body=render_template(
-            "forgot_password.txt", reset_token=reset_token),
-        html_body=render_template(
-            "forgot_password.html", reset_token=reset_token)
-    )
-    return {"message": "Check your inbox."}
-
-
-def reset_password(reset_token, new_password):
-    decoded_token = decode_token(reset_token)
-
-    # Check if expired
-    is_in_blocklist = TokenBlocklist.query.filter(
-        TokenBlocklist.jti == decoded_token["jti"]).first()
-
-    if is_in_blocklist:
-        raise we.Forbidden("Invalid token. Expired or already used.")
-
-    usr = User.query.get(decoded_token["sub"])
-    usr.update(password=new_password)
-
-    db.session.add(TokenBlocklist(
-        jti=decoded_token["jti"], created_at=datetime.now()))
-    db.session.commit()
-
-
-@user_bp.route("/reset-password", methods=["POST"])
-def reset_password_api():
-    data = reset_password_schema.load(request.json)
-    reset_password(data["reset_token"], data["password"])
-    return {"message": "Password has been changed."}
-
-
-@user_bp.route("/reset-password-web", methods=["GET", "POST"])
-def reset_password_frontend():
-    """Creates a reset password frontend. Useful when you build a mobile app.
-    """
-    if not request.args.get("reset_token"):
-        raise we.BadRequest("Reset token missing!")
-
-    if request.method == "GET":
-        return render_template("reset_password.html")
-    else:
-        reset_password(
-            request.args["reset_token"],
-            request.form["newPassword"]
+        access_token = create_access_token(
+            identity=usr,
+            additional_claims=create_additional_claims(usr),
+            expires_delta=current_app.config["JWT_ACCESS_TOKEN_EXPIRES"] if not login["remember_me"] else timedelta(
+                days=365)
         )
-        return "Password has been changed."
-
-
-@user_bp.route("/users/<id>", methods=["GET"])
-@jwt_required(optional=True)
-def get_user(id: int):
-    """Gets User if it's allowed
-
-    Args:
-        id (int): User id
-    """
-    id = int(id)
-    is_admin = False
-    if not current_app.config["VIEW_USER_AS_ANONYMOUS"]:
-        verify_jwt_in_request()
-        is_admin = current_user.has_role("admin")
-
-    if current_user and current_user.id == id:
-        return user_schema.dump(current_user)
-    elif is_admin:
-        return user_schema.dump(User.query.get_or_404(id))
-    elif current_app.config["VIEW_USER_AS_ANONYMOUS"]:
-        return guest_user_schema.dump(User.query.get_or_404(id))
-    elif current_app.config["ALLOW_TO_VIEW_OTHER_USER"]:
-        if is_admin:
-            return user_schema.dump(User.query.get_or_404(id))
-        return guest_user_schema.dump(User.query.get_or_404(id))
-    else:
-        raise we.Forbidden("You don't have permission!")
-
-
-@user_bp.route("/users/<id>", methods=["PATCH"])
-@jwt_required()
-def patch_user(id: int):
-    if current_user.id == int(id):
-        data = update_user_schema.load(
-            request.json, session=db.session, instance=current_user)
-        current_user.update(**data)
-        db.session.commit()
-        return user_schema.dump(current_user)
-    elif not current_user.has_role("admin"):
-        raise we.Forbidden("Don't have permission.")
-    else:
-        usr = User.query.get(id)
-        if not usr:
-            raise we.NotFound("User not found.")
-        data = update_user_schema_admin.load(
-            request.json, session=db.session, instance=usr)
-        usr.update(**data)
-        db.session.commit()
-        return user_schema.dump(usr)
-
-
-@user_bp.route("/users/<id>", methods=["DELETE"])
-@jwt_required()
-def delete_user(id: int):
-    if current_user.id == int(id):
-        db.session.delete(current_user)
-        db.session.commit()
-        return {}
-    elif not current_user.has_role("admin"):
-        raise we.Forbidden("Don't have permission.")
-    else:
-        usr = User.query.get(id)
-        if not usr:
-            raise we.NotFound("User not found.")
-        db.session.delete(usr)
-        db.session.commit()
-        return {}
-
-
-@user_bp.route("/users/me", methods=["GET", "PATCH", "DELETE"])
-@jwt_required()
-def get_me():
-    if request.method == "GET":
-        return user_schema.dump(current_user)
-    elif request.method == "PATCH":
-        return patch_user(current_user.id)
-    else:
-        return delete_user(current_user.id)
-
-
-@user_bp.route("/refresh", methods=["POST"])
-@jwt_required(refresh=True)
-def refresh():
-    access_token = create_access_token(
-        identity=current_user,
-        additional_claims={"roles": [role.name for role in current_user.roles]}
-    )
-    return jsonify(access_token=access_token)
-
-
-@user_bp.route("/logout", methods=["POST"])
-@jwt_required(verify_type=False)
-def logout():
-    # Can apply to Access token and refresh token too!
-    token = get_jwt()
-    db.session.add(
-        TokenBlocklist(
-            user_id=current_user.id,
-            jti=token["jti"],
-            type=token["type"],
-            created_at=datetime.now()
+        refresh_token = create_refresh_token(
+            identity=usr,
+            expires_delta=current_app.config["JWT_REFRESH_TOKEN_EXPIRES"] if not login["remember_me"] else timedelta(
+                days=730)
         )
-    )
-    db.session.commit()
 
-    response = jsonify({"message": "Token revoked"})
-    unset_jwt_cookies(response)
-    return response
+        usr.update_login_history(request.remote_addr)
+        # Create response and set cookies
+        resp = make_response(
+            jsonify(access_token=access_token, refresh_token=refresh_token))
+        set_access_cookies(resp, access_token)
+        set_refresh_cookies(resp, refresh_token)
+
+        return resp
 
 
-@user_bp.route("/find-user", methods=["POST"])
-def find_user():
-    usr = User.find_user(request.json["username"])
-    return guest_user_schema.dump(usr) if usr else abort(404)
+class RegisterAPI(MethodView):
+    decorators = [jwt_required(optional=True)]
+
+    def post(self):
+        """
+        Create Register.
+        """
+        if current_user:
+            abort(400, "Already logged in!")
+        data = UserDTO.register_schema.load(request.json)
+        usr = User.create(**data)
+
+        # Assign default role
+        usr.assign_role("user")
+
+        db.session.add(usr)
+        db.session.commit()
+
+        return UserDTO.user_schema.dump(usr)
+
+
+class ForgotPasswordAPI(MethodView):
+    decorators = [jwt_required(optional=True)]
+
+    def post(self):
+        """
+        Create ForgotPassword.
+        """
+        if current_user:
+            abort(400, "Already logged in!")
+
+        if not request.json.get("username"):
+            abort(400, "Username/e-mail missing!")
+
+        usr = User.find_user(request.json["username"])
+        if not usr:
+            abort(400, "Username/e-mail not found!")
+        if usr.archived:
+            abort(400, "Your user has been archived!")
+
+        reset_token = create_access_token(
+            identity=usr,
+            expires_delta=current_app.config["RESET_PASSWORD_TOKEN_EXPIRES"]
+        )
+        # send_async_email(
+        #     subject="Reset password requested",
+        #     sender="husudosu94@gmail.com",
+        #     recipients=[usr.email],
+        #     text_body=render_template(
+        #         "forgot_password.txt", reset_token=reset_token),
+        #     html_body=render_template(
+        #         "forgot_password.html", reset_token=reset_token)
+        # )
+        return {"message": "Check your inbox."}
+
+
+class UserAPI(MethodView):
+    decorators = [jwt_required()]
+
+    def get(self, id):
+        """
+        Gets User.
+        """
+        if not current_user:
+            abort(401, "Not logged in!")
+
+        if id == "me":
+            # Returns current user claims
+            return {
+                "id": current_user.id,
+                "username": current_user.username,
+                "email": current_user.email,
+                "roles": [role.name for role in current_user.roles],
+                "name": current_user.name,
+                "timezone": current_user.timezone
+            }
+        elif id:
+            if current_user.id == int(id):
+                return UserDTO.user_schema.dump(current_user)
+            elif current_user.has_role("admin"):
+                return UserDTO.user_schema.dump(User.get_or_404(id))
+        else:
+            return UserDTO.guest_user_schema.dump(User.query.all(), many=True)
+
+    def patch(self, id: int):
+        """
+        Updates User.
+        """
+        if current_user.id == int(id):
+            data = UserDTO.update_user_schema.load(
+                request.json, session=db.session, instance=current_user)
+            current_user.update(**data)
+            db.session.commit()
+            return UserDTO.user_schema.dump(current_user)
+        elif not current_user.has_role("admin"):
+            abort(403, "Don't have permission!")
+        else:
+            # Update user as admin
+            usr = User.query.get(id)
+            if not usr:
+                abort(404, "User not found.")
+            data = UserDTO.update_user_schema_admin.load(
+                request.json, session=db.session, instance=usr)
+            usr.update(**data)
+            db.session.commit()
+            return UserDTO.user_schema.dump(usr)
+
+    def delete(self, id: int):
+        """
+        Deletes User.
+        """
+        if current_user.id == int(id):
+            current_user.archived = True
+            db.session.commit()
+            return {}
+        elif not current_user.has_role("admin"):
+            abort(403, "Don't have permission")
+        else:
+            usr = User.get_or_404(id)
+            if not usr.archived:
+                usr.archived = True
+                db.session.commit()
+            else:
+                db.session.delete(usr)
+                db.session.commit()
+            return {}
+
+
+class LogoutAPI(MethodView):
+    decorators = [jwt_required(verify_type=False)]
+
+    def post(self):
+        """
+        Create Logout.
+        """
+        # Can apply to Access token and refresh token too!
+        TokenBlocklist.revoke_token(current_user, get_jwt())
+
+        response = jsonify({"message": "Token revoked"})
+        unset_jwt_cookies(response)
+        return response
+
+
+class RefreshTokenAPI(MethodView):
+    decorators = [jwt_required(refresh=True)]
+
+    def post(self):
+        if current_user.archived:
+            response = make_response(
+                jsonify({"message": "Your user has been archived!"}),
+                401
+            )
+            unset_jwt_cookies(response)
+            return response
+
+        access_token = create_access_token(
+            identity=current_user,
+            additional_claims=create_additional_claims(current_user)
+        )
+        return jsonify(access_token=access_token)
+
+
+class FindUserAPI(MethodView):
+    decorators = []
+
+    def post(self):
+        usr = User.find_user(request.json["username"])
+        return UserDTO.guest_user_schema.dump(usr) if usr else abort(404)
+
+
+login_view = LoginAPI.as_view("login-view")
+register_view = RegisterAPI.as_view("register-view")
+forgotpassword_view = ForgotPasswordAPI.as_view("forgotpassword-view")
+user_view = UserAPI.as_view("user-view")
+logout_view = LogoutAPI.as_view("logout-view")
+refreshtoken_view = RefreshTokenAPI.as_view("refreshtoken-view")
+finduser_view = FindUserAPI.as_view("finduser-view")
+
+
+user_bp.add_url_rule("/login", view_func=login_view, methods=["POST"])
+user_bp.add_url_rule("/register", view_func=register_view, methods=["POST"])
+user_bp.add_url_rule("/forgot-password",
+                     view_func=forgotpassword_view, methods=["POST"])
+user_bp.add_url_rule("/users/<id>", view_func=user_view,
+                     methods=["GET", "PATCH", "DELETE"])
+user_bp.add_url_rule("/logout", view_func=logout_view, methods=["POST"])
+user_bp.add_url_rule("/refresh", view_func=refreshtoken_view, methods=["POST"])
+user_bp.add_url_rule("/find-user", view_func=finduser_view, methods=["POST"])
