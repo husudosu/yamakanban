@@ -117,10 +117,10 @@ def create_app() -> Flask:
 
         admin_role = user.Role.find_or_create("admin")
         user.Role.find_or_create("user")
-        # Check if admin user exists
-        if not user.User.query.filter(
-            user.User.username == "admin"
-        ).first():
+        # Create admin user only there's no existing admin.
+        if not db.session.query(
+            user.user_roles
+        ).filter(user.user_roles.c.role_id == admin_role.id).first():
             app.logger.info("Creating admin user.")
             usr = user.User.create(
                 username="admin",
