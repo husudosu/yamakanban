@@ -37,6 +37,7 @@ class SIOEvent(enum.Enum):
     CARD_ACTIVITY_DELETE = "card.activity.delete"
 
     LIST_NEW = "list.new"
+    LIST_REVERT = "list.revert"
     LIST_UPDATE_ORDER = "list.update.order"
     LIST_UPDATE = "list.update"
     LIST_DELETE = "list.delete"

@@ -11,7 +11,7 @@ from api.model.list import BoardList
 from api.model.card import Card, BoardActivity
 from api.socket import SIOEvent
 
-from api.util.dto import ListDTO
+from api.util.dto import ListDTO, BoardDTO
 import sqlalchemy as sqla
 
 
@@ -74,7 +74,6 @@ class ListService:
         raise Forbidden()
 
     def archive_list(self, current_member: BoardAllowedUser, board_list: BoardList):
-        dmp = ListDTO.lists_schema.dump(board_list)
         board_list.board.activities.append(
             BoardActivity(
                 board_user_id=current_member.id,
@@ -102,10 +101,15 @@ class ListService:
 
         db.session.commit()
 
+        # Load cards for dump
+        board_list.cards = Card.query.filter(
+            Card.list_id == board_list.id
+        ).all()
+        print(BoardDTO.archived_lists_schema.dump(board_list))
         # Send deleted list event
         socketio.emit(
             SIOEvent.LIST_DELETE.value,
-            dmp,
+            BoardDTO.archived_lists_schema.dump(board_list),
             namespace="/board",
             to=f"board-{board_list.board_id}"
         )
@@ -145,10 +149,9 @@ class ListService:
         ).all()
 
         # Dump list and send socket.io event
-        dmp = ListDTO.lists_schema.dump(board_list)
         socketio.emit(
-            SIOEvent.LIST_NEW.value,
-            dmp,
+            SIOEvent.LIST_REVERT.value,
+            ListDTO.lists_schema.dump(board_list),
             namespace="/board",
             to=f"board-{board_list.board_id}"
         )
@@ -202,21 +205,12 @@ class ListService:
         current_member = BoardAllowedUser.get_by_usr_or_403(
             board_list.board_id, current_user.id)
         if current_member.has_permission(BoardPermission.LIST_DELETE):
-            dmp = ListDTO.lists_schema.dump(board_list)
             if not board_list.archived:
                 self.archive_list(current_member, board_list)
             else:
                 db.session.delete(board_list)
 
             db.session.commit()
-
-            # TODO: This can be converted to entity_id based event.
-            socketio.emit(
-                SIOEvent.LIST_DELETE.value,
-                dmp,
-                namespace="/board",
-                to=f"board-{board_list.board_id}"
-            )
         else:
             raise Forbidden()
 
