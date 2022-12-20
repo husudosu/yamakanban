@@ -119,14 +119,16 @@ class BoardService:
                             Card.archived_by_list == True
                         )
                     )
-                ).all()
+                ).order_by(Card.archived_on.desc()).all()
             case "list":
                 return BoardList.query.filter(
                     sqla.and_(
                         BoardList.board_id == board_id,
                         BoardList.archived == True
                     )
-                ).options(sqla_orm.joinedload(BoardList.cards)).all()
+                ).options(
+                    sqla_orm.joinedload(BoardList.cards)
+                ).order_by(BoardList.archived_on.desc()).all()
 
     def post(self, current_user: User, data: dict) -> Board:
         """Creates a new board

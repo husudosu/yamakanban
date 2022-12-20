@@ -13,7 +13,7 @@ from api.model import BoardPermission, CardActivityEvent
 from api.model.board import BoardAllowedUser
 from api.model.list import BoardList
 
-from api.util.dto import SIODTO, CardDTO
+from api.util.dto import SIODTO, CardDTO, BoardDTO
 from api.socket import SIOEvent
 
 
@@ -243,7 +243,7 @@ class CardService:
                         card.archived_on = None
                         # Send new card activity to client socket io
                         socketio.emit(
-                            SIOEvent.CARD_NEW.value,
+                            SIOEvent.CARD_REVERT.value,
                             CardDTO.card_schema.dump(card),
                             namespace="/board",
                             to=f"board-{card.board_id}"
@@ -264,13 +264,14 @@ class CardService:
                             )
                         )
                         activities.append(activity)
+                        # TODO: Refactor CARD_DELETE event into CARD_ARCHIVE
                         socketio.emit(
                             SIOEvent.CARD_DELETE.value,
-                            SIODTO.delete_event_scehma.dump(
+                            SIODTO.event_schema.dump(
                                 {
                                     "list_id": card.list_id,
                                     "card_id": card.id,
-                                    "entity_id": card.id,
+                                    "entity": BoardDTO.archived_cards_schema.dump(card)
                                 }
                             ),
                             namespace="/board",
@@ -339,11 +340,11 @@ class CardService:
                 # Only send CARD_DELETE SIO event.
                 socketio.emit(
                     SIOEvent.CARD_DELETE.value,
-                    SIODTO.delete_event_scehma.dump(
+                    SIODTO.event_schema.dump(
                         {
-                            "list_id": list_id,
-                            "card_id": card_id,
-                            "entity_id": card_id,
+                            "list_id": card.list_id,
+                            "card_id": card.id,
+                            "entity": BoardDTO.archived_cards_schema.dump(card)
                         }
                     ),
                     namespace="/board",

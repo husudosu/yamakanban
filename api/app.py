@@ -100,9 +100,8 @@ def create_app() -> Flask:
 
     @jwt.token_in_blocklist_loader
     def check_if_token_revoked(jwt_header, jwt_payload: dict) -> bool:
-        jti = jwt_payload["jti"]
         token = db.session.query(
-            user.TokenBlocklist.id).filter_by(jti=jti).scalar()
+            user.TokenBlocklist.id).filter_by(jti=jwt_payload["jti"]).scalar()
         return token is not None
 
     @jwt.expired_token_loader

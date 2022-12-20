@@ -8,6 +8,7 @@ class SIOEvent(enum.Enum):
     """Socket.IO events"""
 
     CARD_NEW = "card.new"
+    CARD_REVERT = "card.revert"
     CARD_UPDATE = "card.update"
     CARD_DELETE = "card.delete"
 
