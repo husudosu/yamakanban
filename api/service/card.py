@@ -264,9 +264,8 @@ class CardService:
                             )
                         )
                         activities.append(activity)
-                        # TODO: Refactor CARD_DELETE event into CARD_ARCHIVE
                         socketio.emit(
-                            SIOEvent.CARD_DELETE.value,
+                            SIOEvent.CARD_ARCHIVE.value,
                             SIODTO.event_schema.dump(
                                 {
                                     "list_id": card.list_id,
@@ -337,9 +336,8 @@ class CardService:
                         entity_id=card.id,
                     )
                 )
-                # Only send CARD_DELETE SIO event.
                 socketio.emit(
-                    SIOEvent.CARD_DELETE.value,
+                    SIOEvent.CARD_ARCHIVE.value,
                     SIODTO.event_schema.dump(
                         {
                             "list_id": card.list_id,
@@ -351,6 +349,12 @@ class CardService:
                     to=f"board-{card.board_id}"
                 )
             else:
+                socketio.emit(
+                    SIOEvent.CARD_DELETE.value,
+                    card.id,
+                    namespace="/board",
+                    to=f"board-{card.board_id}"
+                )
                 db.session.delete(card)
             db.session.commit()
 

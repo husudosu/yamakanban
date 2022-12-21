@@ -10,6 +10,7 @@ class SIOEvent(enum.Enum):
     CARD_NEW = "card.new"
     CARD_REVERT = "card.revert"
     CARD_UPDATE = "card.update"
+    CARD_ARCHIVE = "card.archive"
     CARD_DELETE = "card.delete"
 
     CARD_UPDATE_ORDER = "card.update.order"
@@ -40,6 +41,7 @@ class SIOEvent(enum.Enum):
     LIST_REVERT = "list.revert"
     LIST_UPDATE_ORDER = "list.update.order"
     LIST_UPDATE = "list.update"
+    LIST_ARCHIVE = "list.archive"
     LIST_DELETE = "list.delete"
 
 

@@ -57,8 +57,6 @@ class BoardActivityEvent(enum.Enum):
     LIST_REVERT = "list.revert"
     LIST_DELETE = "list.delete"
 
-    CARD_DELETE = "card.delete"
-
 
 class CardActivityEvent(enum.Enum):
     CARD_ASSIGN_TO_LIST = "card.create"

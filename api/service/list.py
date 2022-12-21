@@ -108,7 +108,7 @@ class ListService:
         print(BoardDTO.archived_lists_schema.dump(board_list))
         # Send deleted list event
         socketio.emit(
-            SIOEvent.LIST_DELETE.value,
+            SIOEvent.LIST_ARCHIVE.value,
             BoardDTO.archived_lists_schema.dump(board_list),
             namespace="/board",
             to=f"board-{board_list.board_id}"
@@ -208,6 +208,12 @@ class ListService:
             if not board_list.archived:
                 self.archive_list(current_member, board_list)
             else:
+                socketio.emit(
+                    SIOEvent.LIST_DELETE.value,
+                    board_list.id,
+                    namespace="/board",
+                    to=f"board-{board_list.board_id}"
+                )
                 db.session.delete(board_list)
 
             db.session.commit()

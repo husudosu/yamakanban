@@ -46,7 +46,7 @@ class BoardDTO:
     archived_entities_query_schema = schemas.ArchivedEntititiesQuerySchema()
 
     archived_cards_schema = schemas.CardSchema(only=(
-        "id", "title", "archived_on", "board_list.title", "board_list.id", "board_list.archived",))
+        "id", "title", "archived_on", "archived", "board_list.title", "board_list.id", "board_list.archived",))
     archived_lists_schema = schemas.BoardListSchema(only=(
         "id", "title", "archived_on", "cards.id", "cards.title",
     ))
