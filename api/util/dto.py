@@ -55,8 +55,8 @@ class BoardDTO:
 class UserDTO:
     user_schema = schemas.UserSchema()
     register_schema = schemas.UserSchema(
-        partial=("username", "password", "email",),
-        exclude=("roles",)
+        partial=("username", "password", "email"),
+        exclude=("roles", "current_password",)
     )
     update_user_schema = schemas.UserSchema(
         partial=("username", "password", "email",),

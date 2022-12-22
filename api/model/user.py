@@ -12,8 +12,8 @@ from . import BaseMixin
 from api.app import db
 
 
-class TokenBlocklist(db.Model):
-    __tablename__ = "token_blocklist"
+class Token(db.Model):
+    __tablename__ = "token"
 
     id = sqla.Column(sqla.Integer, primary_key=True)
     user_id = sqla.Column(sqla.Integer, sqla.ForeignKey("user.id"))
@@ -22,17 +22,23 @@ class TokenBlocklist(db.Model):
     created_at = sqla.Column(sqla.DateTime, nullable=False)
     type = sqla.Column(db.String(16), nullable=False,
                        server_default="access_token")
+    revoked = sqla.Column(sqla.Boolean, nullable=False,
+                          server_default="0", default=False)
 
     @classmethod
-    def revoke_token(cls, current_user, token):
-        db.session.add(
-            cls(
-                user_id=current_user.id,
-                jti=token["jti"],
-                type=token["type"],
-                created_at=datetime.now()
+    def revoke_token(cls, token):
+        db.session.query(cls).filter(
+            sqla.and_(
+                cls.jti == token["jti"],
+                cls.type == token["type"]
             )
-        )
+        ).update({"revoked": True})
+        db.session.commit()
+
+    @classmethod
+    def revoke_all_tokens_for_user(cls, user_id: int):
+        db.session.query(cls).filter(
+            cls.user_id == user_id).update({"revoked": True})
         db.session.commit()
 
 
@@ -104,7 +110,7 @@ class User(db.Model, BaseMixin):
         secondary=user_roles
     )
     tokens = sqla_orm.relationship(
-        "TokenBlocklist",
+        "Token",
         cascade="all, delete-orphan"
     )
 

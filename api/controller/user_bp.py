@@ -1,8 +1,9 @@
+from datetime import datetime
 from flask import Blueprint, request, current_app, make_response, jsonify, abort, render_template
 from flask.views import MethodView
 from flask_jwt_extended import (
     create_access_token, jwt_required,
-    get_jwt, current_user, verify_jwt_in_request,
+    get_jwt, current_user,
     create_refresh_token, decode_token,
     set_access_cookies, set_refresh_cookies,
     unset_jwt_cookies
@@ -11,7 +12,7 @@ from datetime import timedelta
 
 from api.app import db
 from api.util.dto import UserDTO
-from api.model.user import User, TokenBlocklist
+from api.model.user import User, Token
 
 
 user_bp = Blueprint("user_bp", __name__, url_prefix="/auth")
@@ -55,8 +56,27 @@ class LoginAPI(MethodView):
             expires_delta=current_app.config["JWT_REFRESH_TOKEN_EXPIRES"] if not login["remember_me"] else timedelta(
                 days=730)
         )
-
+        access_token_decoded = decode_token(access_token)
+        refresh_token_decoded = decode_token(refresh_token)
+        # Add tokens to db
+        db.session.add_all(
+            [
+                Token(
+                    user_id=usr.id,
+                    jti=access_token_decoded["jti"],
+                    type=access_token_decoded["type"],
+                    created_at=datetime.now()
+                ),
+                Token(
+                    user_id=usr.id,
+                    jti=refresh_token_decoded["jti"],
+                    type=refresh_token_decoded["type"],
+                    created_at=datetime.now()
+                ),
+            ]
+        )
         usr.update_login_history(request.remote_addr)
+
         # Create response and set cookies
         resp = make_response(
             jsonify(access_token=access_token, refresh_token=refresh_token))
@@ -187,6 +207,7 @@ class UserAPI(MethodView):
             usr = User.get_or_404(id)
             if not usr.archived:
                 usr.archived = True
+                Token.revoke_all_tokens_for_user(usr.id)
                 db.session.commit()
             else:
                 db.session.delete(usr)
@@ -202,7 +223,7 @@ class LogoutAPI(MethodView):
         Create Logout.
         """
         # Can apply to Access token and refresh token too!
-        TokenBlocklist.revoke_token(current_user, get_jwt())
+        Token.revoke_token(get_jwt())
 
         response = jsonify({"message": "Token revoked"})
         unset_jwt_cookies(response)

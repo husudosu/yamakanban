@@ -5,6 +5,7 @@ from datetime import datetime, timezone, timedelta
 from werkzeug.exceptions import HTTPException
 import json
 
+import sqlalchemy as sqla
 from flask import Blueprint, Flask, Response, make_response, jsonify
 from flask.cli import AppGroup
 
@@ -22,7 +23,6 @@ from flask_compress import Compress
 from flask_socketio import SocketIO
 
 from marshmallow.exceptions import ValidationError
-
 from werkzeug.middleware.profiler import ProfilerMiddleware
 
 from config import Config
@@ -101,8 +101,20 @@ def create_app() -> Flask:
     @jwt.token_in_blocklist_loader
     def check_if_token_revoked(jwt_header, jwt_payload: dict) -> bool:
         token = db.session.query(
-            user.TokenBlocklist.id).filter_by(jti=jwt_payload["jti"]).scalar()
+            user.Token.id
+        ).filter(
+            sqla.and_(
+                user.Token.jti == jwt_payload["jti"],
+                user.Token.revoked == True
+            )
+        ).scalar()
         return token is not None
+
+    @jwt.revoked_token_loader
+    def revoked_token_callback(jwt_header, jwt_payload):
+        resp = make_response(jsonify({"message": "Token revoked"}), 401)
+        unset_jwt_cookies(resp)
+        return resp
 
     @jwt.expired_token_loader
     def expired_token_callback(jwt_header, jwt_payload):
@@ -136,7 +148,7 @@ def create_app() -> Flask:
     def refresh_expiring_jwts(response):
         try:
             # FIXME: Very hacky way to handle logout.
-            if "Token revoked" in str(response.get_data()):
+            if "Token revoked" in str(response.get_data()) or "Token expired" in str(response.get_data()):
                 return response
             exp_timestamp = get_jwt()["exp"]
             now = datetime.now(timezone.utc)
