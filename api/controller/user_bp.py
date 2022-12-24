@@ -199,6 +199,7 @@ class UserAPI(MethodView):
         """
         if current_user.id == int(id):
             current_user.archived = True
+            Token.revoke_all_tokens_for_user(current_user.id)
             db.session.commit()
             return {}
         elif not current_user.has_role("admin"):
