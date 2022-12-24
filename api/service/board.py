@@ -11,10 +11,12 @@ from marshmallow.exceptions import ValidationError
 from api.model.board import Board, BoardAllowedUser, BoardRole
 from api.model.card import Card, BoardActivity
 from api.model.list import BoardList
+
 from api.model import BoardPermission, BoardActivityEvent
 from api.app import db, socketio
 from api.socket import SIOEvent
 from api.model.user import User
+from api.util.dto import BoardDTO
 
 
 class BoardService:
@@ -175,6 +177,12 @@ class BoardService:
         if board.owner_id == current_user.id or current_member.has_permission(BoardPermission.BOARD_EDIT):
             board.update(**data)
             db.session.commit()
+            socketio.emit(
+                SIOEvent.BOARD_UPDATE.value,
+                BoardDTO.board_schema.dump(board),
+                namespace="/board",
+                to=f"board-{board.id}"
+            )
             return board
         raise Forbidden()
 
@@ -203,9 +211,22 @@ class BoardService:
                         event=BoardActivityEvent.BOARD_ARCHIVE.value,
                     )
                 )
+                db.session.commit()
+                socketio.emit(
+                    SIOEvent.BOARD_UPDATE.value,
+                    BoardDTO.board_schema.dump(board),
+                    namespace="/board",
+                    to=f"board-{board.id}"
+                )
             else:
                 db.session.delete(board)
-            db.session.commit()
+                db.session.commit()
+                socketio.emit(
+                    SIOEvent.BOARD_DELETE.value,
+                    board_id,
+                    namespace="/board",
+                    to=f"board-{board_id}"
+                )
         else:
             raise Forbidden()
 
@@ -226,6 +247,12 @@ class BoardService:
                     )
                 )
                 db.session.commit()
+                socketio.emit(
+                    SIOEvent.BOARD_UPDATE.value,
+                    BoardDTO.board_schema.dump(board),
+                    namespace="/board",
+                    to=f"board-{board.id}"
+                )
         else:
             raise Forbidden()
 

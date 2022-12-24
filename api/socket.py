@@ -7,6 +7,10 @@ from flask import current_app
 class SIOEvent(enum.Enum):
     """Socket.IO events"""
 
+    BOARD_ARCHIVE = "board.archive"
+    BOARD_DELETE = "board.delete"
+    BOARD_UPDATE = "board.update"
+
     CARD_NEW = "card.new"
     CARD_REVERT = "card.revert"
     CARD_UPDATE = "card.update"
