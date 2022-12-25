@@ -1,79 +1,107 @@
-# My JWT auth flask boilerplate
+# Trello clone (name subject to change)
 
-A simple JWT handler with role management for my Flask REST backends + Mobile app frontends.
+Trello clone is a self-hosted kanban style board system. You can run on your own server withtout a big hassle.
 
-Lot inspiration came from [Flask-Security-Too](https://github.com/Flask-Middleware/flask-security/) library.
+**_This is an Alpha version!You can experience lot of issues, some features missing. Check out Roadmap for planned features._**
 
-## Features
+# Features
 
-This boilerplate using Flask-JWT-Extended, so you can use any decorators which included on library.
+-   Invite/revoke user access to boards,
+-   Has basic permission support for boards,
+-   Card features:
+    -   Assign multiple dates, users to your cards,
+    -   Create checklists and assign items to your users,
+    -   Edit description of cards by using Markdown syntax,
+    -   Communicate with other board members via a simple comment system,
+    -   Browse history of your cards.
+-   Archive your boards and cards and restore them later or delete them permanently.
+-   Check out board activities including all events
+-   See most of activities without refreshing your browser.
 
--   User, Role handling,
--   Custom decorators for requiring roles and accept_roles,
--   Handling of users "forgot password"
+# Setup
 
-## The project almost ready for production use, only few things missing:
+You need docker, docker-compose and git client on your PC.
 
--   Full test coverage, write "forgot password" tests missing,
--   Create a docker contarized version
-
-## How to use (Docker)
+Clone the repo with this command:
 
 ```bash
-cp sample.env .env.production
-# Edit your settings
-nano .env.production
+# This command gonna fetch trello-clone-backend and frontend module.
+git clone https://github.com/husudosu/trello-clone-backend --recurse-submodules
+cd trello-clone-backend
+```
+
+After cloning is done, you have to create a production.env, you could copy sample.env.
+
+## Configuration variables:
+
+| Variable                | Description                                                              | Required to change | Default value |
+| ----------------------- | ------------------------------------------------------------------------ | ------------------ | ------------- |
+| **SECRET_KEY**          | **VERY IMPORTANT!** You have to use unique key see "Generate secure key" | **YES**            | N/A           |
+| **JWT_SECRET_KEY**      | **VERY IMPORTANT!** You have to use unique key see "Generate secure key" | **YES**            | N/A           |
+| **POSTGRES_PASSWORD**   | **VERY IMPORTANT!** Create a secure password for your database!          | **YES**            | change-it     |
+| **POSTGRES_USER**       | PostgreSQL username.                                                     |                    | todoman       |
+| **POSTGRES_DB**         | PostgreSQL database name.                                                |                    | todoman       |
+| **POSTGRES_HOST**       | PostgreSQL database host.                                                |                    | todoman_db    |
+| **DEFAULT_TIMEZONE**    | Default timezone.                                                        |                    | UTC           |
+| **MAIL_SERVER**         | Mail server                                                              |                    | N/A           |
+| **MAIL_PORT**           | Mail port                                                                |                    | N/A           |
+| **MAIL_USE_TLS**        | Mail use TLS                                                             |                    | 0             |
+| **MAIL_USE_SSL**        | Mail use SSL                                                             |                    | 0             |
+| **MAIL_USERNAME**       | Mail username                                                            |                    | N/A           |
+| **MAIL_PASSWORD**       | Mail password                                                            |                    | N/A           |
+| **MAIL_DEFAULT_SENDER** | Mail default sender                                                      |                    | N/A           |
+| **PROFILER_ENABLED**    | Profiler useful for developers. Disabled by default                      |                    | 0             |
+
+### Generate secure key
+
+**JWT_SECRET_KEY** and **SECRET_KEY** requires an unique safe key!
+You can generate by using:
+
+```bash
+python3 -c "import os; print(os.urandom(10))"
+b'=\xb0\x19\xcf\xa8LAz\xc8\xc8'
+# THIS IS AN EXAMPLE OUTPUT DO NOT USE FOR PRODUCTION!
+# Copy the string between the two apostrophes!
+```
+
+## Build and run container
+
+```bash
+docker-compose build
 docker-compose up -d
 ```
 
-## How to use (Without docker)
+That's all you could access the system by using your browser. https://localhost
 
-Run with gunicorn:
+## Default username and password
 
-```bash
-cp sample.env .env.production
-# Edit your settings
-nano .env.production
-# Run gunicorn
-export FLASK_APP=run.py
-export FLASK_ENV=production
-gunicorn -b 0.0.0.0:5000 -w 4 run:app
-```
+**username:** admin
 
-It's recommended to use NGINX or Apache for production use!
-Check out [Deploying Gunicorn](https://docs.gunicorn.org/en/stable/deploy.html)
+**password:** admin
 
-## Development use
+# Roadmap
 
-```bash
-cp sample.env .env.development
-# Edit your settings
-nano .env.development
-export FLASK_APP=run.py
-export FLASK_ENV=development
-export FLASK_DEBUG=1
-flask run -h 0.0.0.0 -p 5000
-```
+Before we go into beta phase, need to implement these functions:
 
-## Testing
+-   [ ] E-mail notification system
+    -   [ ] You've been assigned to card/checklsit item,
+    -   [ ] Date notification for assigned users (created, due date near, expired, date have been changed),
+    -   [ ] New checklist, checklist item created,
+-   [ ] Add @usertomention support to comment system,
+-   [ ] Make better user experience,
+-   [ ] Notify users be new versions on frontend,
+-   [ ] Better smartphone support,
+-   [ ] Refactor code both on backend and frontend. Create API documentation.
+-   [ ] Come up with a project name. **SERIOUSLY THIS IS THE HARDEST PART FOR ME.**
 
-```bash
-# On your virtualenv
-pip install pytest coverage
-# Running tests
-coverage run -m pytest
-# For coverage report run:
-coverage report -m
-```
+And of course fix all the bugs :-)
 
-## Optimized gunicorn launch
+# Screenshots
 
-gunicorn --worker-class=gevent --worker-connections=1000 --workers=3 run:app
+**Screenshots from:** 2022.12.25 Alpha
 
-## Use this Socket.IO deploy
+Board
+![Board](/screenshots/screenshot_board.png)
 
-gunicorn -k geventwebsocket.gunicorn.workers.GeventWebSocketWorker -w 1 run:app
-
-## Create self-signed key
-
-openssl req -x509 -nodes -days 365 -subj "/C=CA/ST=QC/O=Company, Inc./CN=trelloclone.local" -addext "subjectAltName=DNS:trelloclone.local" -newkey rsa:2048 -keyout nginx-selfsigned.key -out nginx-selfsigned.crt;
+Card
+![Card](/screenshots/screenshot_card.png)
