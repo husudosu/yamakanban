@@ -26,7 +26,7 @@ server {
     index index.html;
     location / {
         add_header Cache-Control "no-cache";
-        add_header Content-Security-Policy "script-src 'self'; frame-src 'self'; object-src 'none'; default-src 'self';"; 
+        add_header Content-Security-Policy "script-src 'self'; frame-src 'self'; object-src 'none'; img-src * 'unsafe-inline'; default-src 'self';"; 
         add_header X-XSS-Protection "1; mode=block";
         add_header X-Robots-Tag "noindex";
         include  /etc/nginx/mime.types;
