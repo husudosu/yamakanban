@@ -89,12 +89,17 @@ Before we go into beta phase, need to implement these functions:
     -   [ ] New checklist, checklist item created,
 -   [ ] Add @usertomention support to comment system,
 -   [ ] Make better user experience,
--   [ ] Notify users be new versions on frontend,
+-   [ ] Notify users about new versions on frontend,
 -   [ ] Better smartphone support,
 -   [ ] Refactor code both on backend and frontend. Create API documentation.
 -   [ ] Come up with a project name. **SERIOUSLY THIS IS THE HARDEST PART FOR ME.**
+        And of course fix all the bugs :-)
 
-And of course fix all the bugs :-)
+# Known issues
+
+You could help with these bugs if you'd like to contribute to this project.
+
+-   [ ] When you create a checklist on a card and add a single item into the list it creates duplicate entry. If you close and reopen the card, the issue is gone. Don't know what's going on. Store commit runs only once pushing into the array running only once as should be, but still get duplication.
 
 # Screenshots
 
