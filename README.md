@@ -79,6 +79,23 @@ That's all you could access the system by using your browser. https://localhost
 
 **password:** admin
 
+# Updating
+
+Go into the root of the project where docker-compose.yml file is and run:
+
+```bash
+docker-compose stop
+git pull --recurse-submodules
+docker-compose build
+docker-compose up -d
+```
+
+# Reporting issues
+
+Please provide some information before you report an issue here.
+
+Be sure you running on the most recent version of the project! For reporting issue please provide exact insturctions, how to reproduce the issue!
+
 # Roadmap
 
 Before we go into beta phase, need to implement these functions:
@@ -94,12 +111,6 @@ Before we go into beta phase, need to implement these functions:
 -   [ ] Refactor code both on backend and frontend. Create API documentation.
 -   [ ] Come up with a project name. **SERIOUSLY THIS IS THE HARDEST PART FOR ME.**
         And of course fix all the bugs :-)
-
-# Known issues
-
-You could help with these bugs if you'd like to contribute to this project.
-
--   [ ] When you create a checklist on a card and add a single item into the list it creates duplicate entry. If you close and reopen the card, the issue is gone. Don't know what's going on. Store commit runs only once pushing into the array running only once as should be, but still get duplication.
 
 # Screenshots
 

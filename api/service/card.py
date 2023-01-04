@@ -43,11 +43,11 @@ class CardService:
         BoardAllowedUser.get_by_usr_or_403(card.board_id, current_user.id)
 
         # Load card activities
-        card.activities = BoardActivity.query.filter(
-            BoardActivity.card_id == card.id
-        ).order_by(
-            sqla.desc(BoardActivity.activity_on)
-        ).limit(args["activity_count"]).all()
+        # card.activities = BoardActivity.query.filter(
+        #     BoardActivity.card_id == card.id
+        # ).order_by(
+        #     sqla.desc(BoardActivity.activity_on)
+        # ).limit(args["activity_count"]).all()
 
         return card
 

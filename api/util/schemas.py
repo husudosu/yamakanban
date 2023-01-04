@@ -372,7 +372,7 @@ class CardSchema(SQLAlchemySchema):
         dump_only=True
     )
     dates = fields.Nested(CardDateSchema, many=True, dump_only=True)
-    activities = fields.Nested(BoardActivitySchema, many=True, dump_only=True)
+    # activities = fields.Nested(BoardActivitySchema, many=True, dump_only=True)
     board_list = fields.Nested(
         BoardListSchema,
         dump_only=True,
