@@ -100,6 +100,7 @@ Be sure you running on the most recent version of the project! For reporting iss
 
 Before we go into beta phase, need to implement these functions:
 
+-   [ ] Do unit tests (already existing unit tests are very old.)
 -   [ ] E-mail notification system
     -   [ ] You've been assigned to card/checklsit item,
     -   [ ] Date notification for assigned users (created, due date near, expired, date have been changed),
@@ -110,7 +111,8 @@ Before we go into beta phase, need to implement these functions:
 -   [ ] Better smartphone support,
 -   [ ] Refactor code both on backend and frontend. Create API documentation.
 -   [ ] Come up with a project name. **SERIOUSLY THIS IS THE HARDEST PART FOR ME.**
-        And of course fix all the bugs :-)
+
+And of course fix all the bugs :-)
 
 # Screenshots
 

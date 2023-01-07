@@ -111,7 +111,7 @@ class BoardFindMemberAPI(MethodView):
         )
         if not member:
             abort(404, "Member not found")
-        return BoardDTO.allowed_user_schema(member)
+        return BoardDTO.allowed_user_schema.dump(member)
 
 
 class BoardMemberAPI(MethodView):
