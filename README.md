@@ -1,6 +1,6 @@
 # Yamakanban
 
-Trello clone is a self-hosted kanban style board system. You can run on your own server withtout a big hassle.
+Yamakanban is a self-hosted kanban style board system. You can run on your own server withtout a big hassle.
 
 **_This is an Alpha version!You can experience lot of issues, some features missing. Check out Roadmap for planned features._**
 
@@ -25,9 +25,9 @@ You need docker, docker-compose and git client on your PC.
 Clone the repo with this command:
 
 ```bash
-# This command gonna fetch trello-clone-backend and frontend module.
-git clone https://github.com/husudosu/trello-clone-backend --recurse-submodules
-cd trello-clone-backend
+# This command gonna fetch yamakanban-backend and frontend module.
+git clone https://github.com/husudosu/yamakanban-backend --recurse-submodules
+cd yamakanban-backend
 ```
 
 After cloning is done, you have to create a production.env, you could copy sample.env.
@@ -110,7 +110,6 @@ Before we go into beta phase, need to implement these functions:
 -   [ ] Notify users about new versions on frontend,
 -   [ ] Better smartphone support,
 -   [ ] Refactor code both on backend and frontend. Create API documentation.
--   [ ] Come up with a project name. **SERIOUSLY THIS IS THE HARDEST PART FOR ME.**
 
 And of course fix all the bugs :-)
 
