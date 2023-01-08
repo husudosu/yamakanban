@@ -39,9 +39,9 @@ After cloning is done, you have to create a production.env, you could copy sampl
 | **SECRET_KEY**          | **VERY IMPORTANT!** You have to use unique key see "Generate secure key" | **YES**            | N/A           |
 | **JWT_SECRET_KEY**      | **VERY IMPORTANT!** You have to use unique key see "Generate secure key" | **YES**            | N/A           |
 | **POSTGRES_PASSWORD**   | **VERY IMPORTANT!** Create a secure password for your database!          | **YES**            | change-it     |
-| **POSTGRES_USER**       | PostgreSQL username.                                                     |                    | todoman       |
-| **POSTGRES_DB**         | PostgreSQL database name.                                                |                    | todoman       |
-| **POSTGRES_HOST**       | PostgreSQL database host.                                                |                    | todoman_db    |
+| **POSTGRES_USER**       | PostgreSQL username.                                                     |                    | yamakanban    |
+| **POSTGRES_DB**         | PostgreSQL database name.                                                |                    | yamakanban    |
+| **POSTGRES_HOST**       | PostgreSQL database host.                                                |                    | yamakanban_db |
 | **DEFAULT_TIMEZONE**    | Default timezone.                                                        |                    | UTC           |
 | **MAIL_SERVER**         | Mail server                                                              |                    | N/A           |
 | **MAIL_PORT**           | Mail port                                                                |                    | N/A           |

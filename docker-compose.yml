@@ -1,9 +1,9 @@
 version: "3.1"
 services:
-    todoman_db:
+    yamakanban_db:
         image: postgres
-        hostname: todoman_db
-        container_name: todoman_db
+        hostname: yamakanban_db
+        container_name: yamakanban_db
         restart: unless-stopped
         volumes:
             - sql:/var/lib/postgresql/data
@@ -11,27 +11,27 @@ services:
             - "production.env"
         ports:
             - "5432:5432"
-    todoman:
+    yamakanban:
         restart: unless-stopped
         command: ./boot.sh
-        hostname: todoman
-        container_name: todoman
+        hostname: yamakanban
+        container_name: yamakanban
         build:
             context: .
             dockerfile: ./dockerfile
         volumes:
-            - todoman_data:/root/data
+            - yamakanban_data:/root/data
         env_file:
             - "production.env"
         ports:
             - "80:80"
             - "443:443"
         depends_on:
-            - todoman_db
+            - yamakanban_db
         links:
-            - todoman_db
+            - yamakanban_db
 volumes:
     sql:
         driver: local
-    todoman_data:
+    yamakanban_data:
         driver: local

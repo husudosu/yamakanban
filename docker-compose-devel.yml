@@ -1,9 +1,9 @@
 version: "3.1"
 services:
-    todoman_db:
+    yamakanban_db:
         image: postgres
-        hostname: todoman_db
-        container_name: todoman_db
+        hostname: yamakanban_db
+        container_name: yamakanban_db
         volumes:
             - sql:/var/lib/postgresql/data
         env_file:
