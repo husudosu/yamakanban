@@ -25,9 +25,9 @@ You need docker, docker-compose and git client on your PC.
 Clone the repo with this command:
 
 ```bash
-# This command gonna fetch yamakanban-backend and frontend module.
-git clone https://github.com/husudosu/yamakanban-backend --recurse-submodules
-cd yamakanban-backend
+# This command gonna fetch yamakanban and frontend module.
+git clone https://github.com/husudosu/yamakanban --recurse-submodules
+cd yamakanban
 ```
 
 After cloning is done, you have to create a production.env, you could copy sample.env.
