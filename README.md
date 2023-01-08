@@ -1,4 +1,4 @@
-# Trello clone (name subject to change)
+# Yamakanban
 
 Trello clone is a self-hosted kanban style board system. You can run on your own server withtout a big hassle.
 
