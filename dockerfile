@@ -14,7 +14,7 @@ RUN apt update && \
     nginx \
     netcat \
     supervisor -y
-RUN openssl req -x509 -nodes -days 365 -subj "/C=CA/ST=QC/O=Company, Inc./CN=trelloclone.local" -addext "subjectAltName=DNS:trelloclone.local" -newkey rsa:2048 -keyout /etc/ssl/private/nginx-selfsigned.key -out /etc/ssl/certs/nginx-selfsigned.crt;
+RUN openssl req -x509 -nodes -days 365 -subj "/C=CA/ST=QC/O=Company, Inc./CN=yamakanban.local" -addext "subjectAltName=DNS:yamakanban.local" -newkey rsa:2048 -keyout /etc/ssl/private/nginx-selfsigned.key -out /etc/ssl/certs/nginx-selfsigned.crt;
 
 # Install node.js and npm too.
 # Donwload and install Node.js (https://github.com/nodejs/docker-node/blob/9220863a62a5f9d76bb761d1e385674de39224a6/19/bullseye/Dockerfile)

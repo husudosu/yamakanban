@@ -1,6 +1,6 @@
 server {
     listen 80;
-    server_name trelloclone.local;
+    server_name yamakanban.local;
     return 301 https://$host$request_uri;
 }
 
