@@ -58,8 +58,9 @@ class RevertBoardAPI(MethodView):
         """
         Reverts board.
         """
-        board_service.revert(current_user, board_id)
-        return {"message": "Board reverted"}
+        return BoardDTO.board_schema.dump(
+            board_service.revert(current_user, board_id)
+        )
 
 
 class BoardListsOrderAPI(MethodView):

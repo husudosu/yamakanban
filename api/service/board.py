@@ -253,6 +253,7 @@ class BoardService:
                     namespace="/board",
                     to=f"board-{board.id}"
                 )
+                return board
         else:
             raise Forbidden()
 
