@@ -1,10 +1,11 @@
 from flask import Blueprint, request
 from flask.views import MethodView
 from flask_jwt_extended import current_user, jwt_required
+from marshmallow.exceptions import ValidationError
 from webargs.flaskparser import use_args
 
 from api.service.card import (
-    card_service, comment_service, member_service, date_service
+    card_service, comment_service, member_service, date_service, upload_service
 )
 from api.util.dto import CardDTO
 
@@ -116,6 +117,42 @@ class CardDateAPI(MethodView):
         return {"message": "Card date deleted"}
 
 
+class CardFileUploadAPI(MethodView):
+    decorators = [jwt_required()]
+
+    def get(self, file_id: int):
+        """
+        Downloads a file
+        """
+        pass
+
+    def post(self, card_id: int):
+        """
+        Uploads and creates entity on database.
+        """
+        if "file" not in request.files:
+            raise ValidationError({"file": ["No file part."]})
+        file = request.files["file"]
+
+        if file.filename == "":
+            raise ValidationError({"file": ["No file selected."]})
+        if file:
+            return CardDTO.file_upload_schema.dump(
+                upload_service.post(
+                    current_user,
+                    card_id,
+                    request.json["file"]
+                )
+            )
+        return {"message": "No file."}
+
+    def delete(self, file_id: int):
+        """
+        Deletes an upload from db and server datastore too.
+        """
+        pass
+
+
 card_view = CardAPI.as_view("card-view")
 card_activity_view = CardActivityAPI.as_view("card-activity-view")
 card_comment_view = CardCommentAPI.as_view("card-comment-view")
@@ -124,6 +161,7 @@ card_assign_member_view = CardAssignMemberAPI.as_view(
 card_deassign_member_view = CardDeassignAPI.as_view(
     "card-deassign-member-view")
 card_date_view = CardDateAPI.as_view("card-date-view")
+cardfileupload_view = CardFileUploadAPI.as_view("cardfileupload-view")
 
 card_bp.add_url_rule("/card/<card_id>", view_func=card_view,
                      methods=["GET", "PATCH", "DELETE"])
@@ -147,3 +185,7 @@ card_bp.add_url_rule("/card/<card_id>/date",
                      view_func=card_date_view, methods=["POST"])
 card_bp.add_url_rule(
     "/date/<date_id>", view_func=card_date_view, methods=["PATCH", "DELETE"])
+card_bp.add_url_rule("/card/<card_id>/uploads",
+                     methods=["POST"], view_func=cardfileupload_view)
+card_bp.add_url_rule("/card-upload/<file_id>",
+                     methods=["DELETE"], view_func=cardfileupload_view)

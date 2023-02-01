@@ -8,7 +8,7 @@ from marshmallow_sqlalchemy import SQLAlchemySchema
 from api.model.board import (
     Board, BoardAllowedUser, BoardRole, BoardRolePermission
 )
-from api.model.card import Card, CardComment, CardDate
+from api.model.card import Card, CardComment, CardDate, CardFileUpload
 from api.model.checklist import ChecklistItem, CardChecklist
 from api.model.list import BoardList
 from api.model import user
@@ -352,6 +352,18 @@ class CardDateSchema(SQLAlchemySchema):
         unknown = EXCLUDE
 
 
+class CardFileUploadSchema(SQLAlchemySchema):
+    id = fields.Integer(dump_only=True)
+    board_id = fields.Integer(dump_only=True)
+    card_id = fields.Integer(dump_only=True)
+    file_name = fields.String(dump_only=True)
+    created_on = fields.DateTime("%Y-%m-%d %H:%M:%S", dump_only=True)
+
+    class Meta:
+        model = CardFileUpload
+        unknown = EXCLUDE
+
+
 class CardSchema(SQLAlchemySchema):
     id = fields.Integer(dump_only=True)
     board_id = fields.Integer(dump_only=True)
@@ -365,6 +377,7 @@ class CardSchema(SQLAlchemySchema):
     archived_by_list = fields.Boolean(dump_only=True)
 
     archived_on = fields.DateTime("%Y-%m-%d %H:%M:%S", dump_only=True)
+    created_on = fields.DateTime("%Y-%m-%d %H:%M:%S", dump_only=True)
 
     checklists = fields.Nested(CardChecklistSchema, many=True, dump_only=True)
     assigned_members = fields.Nested(

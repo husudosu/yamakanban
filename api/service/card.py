@@ -1,14 +1,18 @@
+import os
 import json
 from werkzeug.exceptions import Forbidden, NotFound
+from werkzeug.utils import secure_filename
+
 from datetime import datetime
 from marshmallow.exceptions import ValidationError
 import sqlalchemy as sqla
+from flask import current_app
 from flask_sqlalchemy import Pagination
 
 from api.app import db, socketio
 
 from api.model.user import User
-from api.model.card import Card, BoardActivity, CardComment, CardMember, CardDate
+from api.model.card import Card, BoardActivity, CardComment, CardMember, CardDate, CardFileUpload
 from api.model import BoardPermission, CardActivityEvent
 from api.model.board import BoardAllowedUser
 from api.model.list import BoardList
@@ -755,7 +759,92 @@ class DateService:
             raise Forbidden()
 
 
+class CardFileUploadService:
+    # TODO: Delete uploads of card if the card pernamently deleted.
+    # TODO: Delete upload of board if the board pernamently deleted.
+    # TODO: Test file upload
+
+    def store_file(self, upload_path: str, file) -> str:
+        """Stores file on disk
+
+        Args:
+            upload_path (str): Path to upload
+            file (_type_): File to store
+
+        Raises:
+            ValidationError: If file exists for card
+
+        Returns:
+            str: Secured filename by werkzeug
+        """
+        os.makedirs(upload_path, exist_ok=True)
+        filename = secure_filename(file.filename)
+        fpath = os.path.join(upload_path, filename)
+        if not os.path.exists(fpath):
+            file.save(fpath, filename)
+        else:
+            raise ValidationError(
+                "file", [f"File named {filename} already exists for card!"])
+        return filename
+
+    def post(self, current_user: User, card_id: int, file) -> CardFileUpload:
+        card: Card = Card.get_or_404(card_id)
+        current_member: BoardAllowedUser = BoardAllowedUser.get_by_usr_or_403(
+            card.board_id, current_user.id)
+
+        if current_member.has_permission(BoardPermission.FILE_UPLOAD):
+            # Upload file
+            upload_path = os.path.join(
+                current_app.config["USER_UPLOAD_DIR"],
+                card.board_id,
+                card.id
+            )
+            filename = self.store_file(upload_path, file)
+            # Create upload
+            upload = CardFileUpload(
+                card_id=card.id,
+                board_id=card.board_id,
+                file_name=filename
+            )
+            db.session.add(upload)
+            # Create activity
+            activity = BoardActivity(
+                card_id=card.id,
+                board_id=card.board_id,
+                board_user_id=current_member.id,
+                event=CardActivityEvent.FILE_UPLOAD.value,
+                entity_id=upload.id,
+                changes={"to": {"file_name": upload.file_name}}
+            )
+            card.activities.append(activity)
+            db.session.commit()
+
+            # Send SIO events
+            socketio.emit(
+                SIOEvent.FILE_UPLOAD.value,
+                SIODTO.event_schema.dump({
+                    "card_id": card.id,
+                    "list_id": card.list_id,
+                    "entity": CardDTO.file_upload_schema.dump(upload)
+                }),
+                namespace="/board",
+                to=f"board-{card.board_id}"
+            )
+            socketio.emit(
+                SIOEvent.CARD_ACTIVITY.value,
+                CardDTO.activity_schema.dump(activity),
+                namespace="/board",
+                to=f"card-{card.id}"
+            )
+
+            return upload
+
+    def delete(self, current_user: User, file_id: int):
+        pass
+
+
 card_service = CardService()
 comment_service = CommentService()
 member_service = MemberService()
 date_service = DateService()
+upload_service = CardFileUploadService()

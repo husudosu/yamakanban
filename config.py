@@ -61,3 +61,7 @@ class Config:
 
     DEFAULT_TIMEZONE = os.environ.get("DEFAULT_TIMEZONE", "Europe/Budapest")
     PROFILER_ENABLED = strtobool(os.environ.get("PROFILER_ENABLED", "0"))
+
+    DATA_DIR = os.environ.get("DATA_DIR", "/root/data")
+    USER_UPLOAD_DIR = os.path.join(DATA_DIR, "user_uploads")
+    MAX_CONTENT_LENGTH = 30 * 1000 * 1000

@@ -11,6 +11,8 @@ class CardDTO:
     activity_paginated_schema = schemas.BoardActivityPaginatedSchema()
     activity_schema_query = schemas.BoardActivityQuerySchema()
 
+    file_upload_schema = schemas.CardFileUploadSchema()
+
     member_schema = schemas.CardMemberSchema()
     date_schema = schemas.CardDateSchema()
     query_schema = schemas.CardQuerySchema()

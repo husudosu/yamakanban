@@ -101,6 +101,22 @@ class CardDate(db.Model, BaseMixin):
     card = sqla_orm.relationship("Card", back_populates="dates", uselist=False)
 
 
+class CardFileUpload(db.Model, BaseMixin):
+
+    __tablename__ = "card_file_upload"
+    id = sqla.Column(sqla.Integer, primary_key=True)
+    card_id = sqla.Column(sqla.Integer, sqla.ForeignKey(
+        "card.id", ondelete="CASCADE"))
+    board_id = sqla.Column(sqla.Integer, sqla.ForeignKey(
+        "board.id", ondelete="CASCADE"))
+
+    file_name = sqla.Column(sqla.String, nullable=False)
+    created_on = sqla.Column(
+        sqla.DateTime, default=datetime.utcnow, server_default="NOW()")
+
+    card = sqla_orm.relationship("Card")
+
+
 class Card(db.Model, BaseMixin):
 
     __tablename__ = "card"
@@ -120,6 +136,8 @@ class Card(db.Model, BaseMixin):
     archived_by_list = sqla.Column(
         sqla.Boolean, server_default="0", default=False)
     archived_on = sqla.Column(sqla.DateTime)
+    created_on = sqla.Column(
+        sqla.DateTime, nullable=False, default=datetime.utcnow, server_default="NOW()")
 
     board_list = sqla_orm.relationship(
         "BoardList", back_populates="cards"
@@ -147,3 +165,6 @@ class Card(db.Model, BaseMixin):
     )
 
     board = sqla_orm.relationship("Board")
+    file_uploads = sqla_orm.relationship(
+        "CardFileUpload", back_populates="card"
+    )

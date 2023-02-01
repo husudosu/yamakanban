@@ -37,6 +37,9 @@ class BoardPermission(enum.Enum):
     CHECKLIST_EDIT = "checklist.edit"
     CHECKLIST_ITEM_MARK = "checklist_item.mark"
 
+    FILE_UPLOAD = "file.upload"
+    FILE_DELETE = "fiel.delete"
+
 
 class BoardActivityEvent(enum.Enum):
     BOARD_CREATE = "board.create"
@@ -77,3 +80,6 @@ class CardActivityEvent(enum.Enum):
     CARD_ADD_DATE = "card.date.create"
     CARD_EDIT_DATE = "card.date.update"
     CARD_DELETE_DATE = "card.date.delete"
+
+    FILE_UPLOAD = "file.upload"
+    FILE_DELETE = "file.delete"

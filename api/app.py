@@ -1,3 +1,4 @@
+import os
 import traceback
 import click
 from datetime import datetime, timezone, timedelta
@@ -13,8 +14,7 @@ from flask_cors import CORS
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 from flask_jwt_extended import (
-    JWTManager, get_jwt, create_access_token,
-    get_jwt_identity, set_access_cookies,
+    JWTManager, get_jwt, create_access_token, set_access_cookies,
     current_user, unset_jwt_cookies
 )
 from jwt import ExpiredSignatureError
@@ -46,6 +46,8 @@ def create_app() -> Flask:
             restrictions=[5],
             profile_dir='./profile'
         )
+    # Create user upload directory
+    os.makedirs(app.config["USER_UPLOAD_DIR"], exist_ok=True)
 
     factory_cli = AppGroup("factory")
 
