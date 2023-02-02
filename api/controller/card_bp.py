@@ -141,7 +141,7 @@ class CardFileUploadAPI(MethodView):
                 upload_service.post(
                     current_user,
                     card_id,
-                    request.json["file"]
+                    file
                 )
             )
         return {"message": "No file."}
@@ -150,7 +150,8 @@ class CardFileUploadAPI(MethodView):
         """
         Deletes an upload from db and server datastore too.
         """
-        pass
+        upload_service.delete(current_user, file_id)
+        return {"message": "File deleted."}
 
 
 card_view = CardAPI.as_view("card-view")

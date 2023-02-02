@@ -2,6 +2,7 @@ import os
 import json
 from werkzeug.exceptions import Forbidden, NotFound
 from werkzeug.utils import secure_filename
+from werkzeug.datastructures import FileStorage
 
 from datetime import datetime
 from marshmallow.exceptions import ValidationError
@@ -764,7 +765,7 @@ class CardFileUploadService:
     # TODO: Delete upload of board if the board pernamently deleted.
     # TODO: Test file upload
 
-    def store_file(self, upload_path: str, file) -> str:
+    def store_file(self, upload_path: str, file: FileStorage) -> str:
         """Stores file on disk
 
         Args:
@@ -780,14 +781,16 @@ class CardFileUploadService:
         os.makedirs(upload_path, exist_ok=True)
         filename = secure_filename(file.filename)
         fpath = os.path.join(upload_path, filename)
+        print(file, fpath)
         if not os.path.exists(fpath):
-            file.save(fpath, filename)
+            file.save(fpath)
         else:
-            raise ValidationError(
-                "file", [f"File named {filename} already exists for card!"])
+            raise ValidationError({
+                "file": [f"File named {filename} already exists for card!"]
+            })
         return filename
 
-    def post(self, current_user: User, card_id: int, file) -> CardFileUpload:
+    def post(self, current_user: User, card_id: int, file: FileStorage) -> CardFileUpload:
         card: Card = Card.get_or_404(card_id)
         current_member: BoardAllowedUser = BoardAllowedUser.get_by_usr_or_403(
             card.board_id, current_user.id)
@@ -796,8 +799,8 @@ class CardFileUploadService:
             # Upload file
             upload_path = os.path.join(
                 current_app.config["USER_UPLOAD_DIR"],
-                card.board_id,
-                card.id
+                str(card.board_id),
+                str(card.id)
             )
             filename = self.store_file(upload_path, file)
             # Create upload
@@ -814,7 +817,7 @@ class CardFileUploadService:
                 board_user_id=current_member.id,
                 event=CardActivityEvent.FILE_UPLOAD.value,
                 entity_id=upload.id,
-                changes={"to": {"file_name": upload.file_name}}
+                changes=json.dumps({"to": {"file_name": upload.file_name}})
             )
             card.activities.append(activity)
             db.session.commit()
@@ -838,9 +841,59 @@ class CardFileUploadService:
             )
 
             return upload
+        raise Forbidden()
 
     def delete(self, current_user: User, file_id: int):
-        pass
+        upload: CardFileUpload = CardFileUpload.get_or_404(file_id)
+        current_member: BoardAllowedUser = BoardAllowedUser.get_by_usr_or_403(
+            upload.board_id, current_user.id)
+
+        if current_member.has_permission(BoardPermission.FILE_DELETE):
+            sio_event = {
+                "card_id": upload.card_id,
+                "list_id": upload.card.list_id,
+                "entity_id": upload.id
+            }
+
+            # Delete file.
+            upload_path = os.path.join(
+                current_app.config["USER_UPLOAD_DIR"],
+                str(upload.board_id),
+                str(upload.card_id),
+                upload.file_name
+            )
+
+            if os.path.exists(upload_path):
+                os.remove(upload_path)
+
+            # Create activity
+            activity = BoardActivity(
+                card_id=upload.card_id,
+                board_id=upload.board_id,
+                board_user_id=current_member.id,
+                event=CardActivityEvent.FILE_DELETE.value,
+                entity_id=upload.id,
+            )
+
+            upload.card.activities.append(activity)
+            db.session.delete(upload)
+            db.session.commit()
+
+            # Send SIO events
+            socketio.emit(
+                SIOEvent.FILE_DELETE.value,
+                sio_event,
+                namespace="/board",
+                to=f"board-{upload.board_id}"
+            )
+            socketio.emit(
+                SIOEvent.CARD_ACTIVITY.value,
+                CardDTO.activity_schema.dump(activity),
+                namespace="/board",
+                to=f"card-{upload.card_id}"
+            )
+        else:
+            raise Forbidden()
 
 
 card_service = CardService()

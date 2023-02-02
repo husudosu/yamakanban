@@ -114,7 +114,7 @@ class CardFileUpload(db.Model, BaseMixin):
     created_on = sqla.Column(
         sqla.DateTime, default=datetime.utcnow, server_default="NOW()")
 
-    card = sqla_orm.relationship("Card")
+    card = sqla_orm.relationship("Card", back_populates="file_uploads")
 
 
 class Card(db.Model, BaseMixin):
