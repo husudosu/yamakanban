@@ -1,4 +1,4 @@
-from flask import Blueprint, request
+from flask import Blueprint, request, send_file
 from flask.views import MethodView
 from flask_jwt_extended import current_user, jwt_required
 from marshmallow.exceptions import ValidationError
@@ -124,7 +124,9 @@ class CardFileUploadAPI(MethodView):
         """
         Downloads a file
         """
-        pass
+        return send_file(
+            upload_service.get(current_user, file_id)
+        )
 
     def post(self, card_id: int):
         """
@@ -189,4 +191,4 @@ card_bp.add_url_rule(
 card_bp.add_url_rule("/card/<card_id>/uploads",
                      methods=["POST"], view_func=cardfileupload_view)
 card_bp.add_url_rule("/card-upload/<file_id>",
-                     methods=["DELETE"], view_func=cardfileupload_view)
+                     methods=["GET", "DELETE"], view_func=cardfileupload_view)

@@ -392,6 +392,9 @@ class CardSchema(SQLAlchemySchema):
         only=("title", "id", "archived",)
     )
 
+    file_uploads = fields.Nested(
+        CardFileUploadSchema, dump_only=True, many=True)
+
     class Meta:
         model = Card
         unknown = EXCLUDE

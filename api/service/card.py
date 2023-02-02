@@ -1,5 +1,6 @@
 import os
 import json
+import shutil
 from werkzeug.exceptions import Forbidden, NotFound
 from werkzeug.utils import secure_filename
 from werkzeug.datastructures import FileStorage
@@ -360,6 +361,16 @@ class CardService:
                     namespace="/board",
                     to=f"board-{card.board_id}"
                 )
+                # We delete files for card
+                upload_path = os.path.join(
+                    current_app.config["USER_UPLOAD_DIR"],
+                    str(card.board_id),
+                    str(card.id)
+                )
+
+                if os.path.exists(upload_path):
+                    shutil.rmtree(upload_path)
+
                 db.session.delete(card)
             db.session.commit()
 
@@ -790,6 +801,29 @@ class CardFileUploadService:
             })
         return filename
 
+    def get(self, current_user: User, file_id: int) -> str:
+        """Gets file and if the user has permission for downloading files
+        downloads the file (handled by blueprint)
+
+        Args:
+            current_user (User): Current logged in user
+            file_id (int): CardFileUpload id
+
+        Returns:
+            str: File path to send to frontend
+        """
+        upload: CardFileUpload = CardFileUpload.get_or_404(file_id)
+        current_member: BoardAllowedUser = BoardAllowedUser.get_by_usr_or_403(
+            upload.board_id, current_user.id)
+        if current_member.has_permission(BoardPermission.FILE_DOWNLOAD):
+            return os.path.join(
+                current_app.config["USER_UPLOAD_DIR"],
+                str(upload.board_id),
+                str(upload.card_id),
+                upload.file_name
+            )
+        raise Forbidden()
+
     def post(self, current_user: User, card_id: int, file: FileStorage) -> CardFileUpload:
         card: Card = Card.get_or_404(card_id)
         current_member: BoardAllowedUser = BoardAllowedUser.get_by_usr_or_403(
@@ -873,6 +907,13 @@ class CardFileUploadService:
                 board_user_id=current_member.id,
                 event=CardActivityEvent.FILE_DELETE.value,
                 entity_id=upload.id,
+                changes=json.dumps(
+                    {
+                        "from": {
+                            "file_name": upload.file_name
+                        }
+                    }
+                )
             )
 
             upload.card.activities.append(activity)

@@ -37,8 +37,9 @@ class BoardPermission(enum.Enum):
     CHECKLIST_EDIT = "checklist.edit"
     CHECKLIST_ITEM_MARK = "checklist_item.mark"
 
+    FILE_DOWNLOAD = "file.download"
     FILE_UPLOAD = "file.upload"
-    FILE_DELETE = "fiel.delete"
+    FILE_DELETE = "file.delete"
 
 
 class BoardActivityEvent(enum.Enum):

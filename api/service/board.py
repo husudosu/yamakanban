@@ -1,5 +1,9 @@
+import os
+import shutil
+
 from typing import List
 from datetime import datetime
+from flask import current_app
 import json
 import typing
 import sqlalchemy as sqla
@@ -219,6 +223,15 @@ class BoardService:
                     to=f"board-{board.id}"
                 )
             else:
+                # We delete files for board
+                upload_path = os.path.join(
+                    current_app.config["USER_UPLOAD_DIR"],
+                    str(board.id)
+                )
+
+                if os.path.exists(upload_path):
+                    shutil.rmtree(upload_path)
+
                 db.session.delete(board)
                 db.session.commit()
                 socketio.emit(
