@@ -1,3 +1,4 @@
+from werkzeug.exceptions import NotFound
 from flask import Blueprint, request, send_file
 from flask.views import MethodView
 from flask_jwt_extended import current_user, jwt_required
@@ -124,9 +125,10 @@ class CardFileUploadAPI(MethodView):
         """
         Downloads a file
         """
-        return send_file(
-            upload_service.get(current_user, file_id)
-        )
+        fpath = upload_service.get(current_user, file_id)
+        if fpath:
+            return send_file(fpath)
+        raise NotFound("File not exists on server!")
 
     def post(self, card_id: int):
         """

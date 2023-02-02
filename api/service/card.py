@@ -772,9 +772,6 @@ class DateService:
 
 
 class CardFileUploadService:
-    # TODO: Delete uploads of card if the card pernamently deleted.
-    # TODO: Delete upload of board if the board pernamently deleted.
-    # TODO: Test file upload
 
     def store_file(self, upload_path: str, file: FileStorage) -> str:
         """Stores file on disk
@@ -816,12 +813,15 @@ class CardFileUploadService:
         current_member: BoardAllowedUser = BoardAllowedUser.get_by_usr_or_403(
             upload.board_id, current_user.id)
         if current_member.has_permission(BoardPermission.FILE_DOWNLOAD):
-            return os.path.join(
+            fpath = os.path.join(
                 current_app.config["USER_UPLOAD_DIR"],
                 str(upload.board_id),
                 str(upload.card_id),
                 upload.file_name
             )
+            if os.path.exists(fpath):
+                return fpath
+            return None
         raise Forbidden()
 
     def post(self, current_user: User, card_id: int, file: FileStorage) -> CardFileUpload:
