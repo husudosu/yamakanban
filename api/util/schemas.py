@@ -140,6 +140,7 @@ class BoardListSchema(SQLAlchemySchema):
 
     archived = fields.Boolean()
     archived_on = fields.DateTime("%Y-%m-%d %H:%M:%S", dump_only=True)
+    wip_limit = fields.Integer(allow_none=False)
 
     cards = fields.Nested(
         lambda: CardSchema,

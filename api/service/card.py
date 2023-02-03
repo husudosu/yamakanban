@@ -210,9 +210,16 @@ class CardService:
                     # Get target list id
                     target_list: BoardList = BoardList.get_or_404(value)
 
+
                     if target_list.board_id != card.board_id:
                         raise ValidationError(
                             {"list_id": ["Cannot move card to other board!"]})
+
+                    # Check target list WIP limit
+                    if len(target_list.cards) == target_list.wip_limit:
+                        raise ValidationError(
+                            {"list_id": ["Target list WIP limit reached!"]}
+                        )
 
                     activity = BoardActivity(
                         card_id=card.id,

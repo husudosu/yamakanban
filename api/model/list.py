@@ -16,10 +16,11 @@ class BoardList(db.Model, BaseMixin):
 
     archived = sqla.Column(sqla.Boolean, server_default="0", default=False)
     archived_on = sqla.Column(sqla.DateTime)
+    wip_limit = sqla.Column(sqla.Integer, nullable=False,
+                            server_default="-1", default=0)
 
     board = sqla_orm.relationship("Board", back_populates="lists")
     cards = sqla_orm.relationship(
         "Card",
-        back_populates="board_list",
-        lazy="noload"
+        back_populates="board_list"
     )
