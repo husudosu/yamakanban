@@ -865,7 +865,7 @@ class CardFileUploadService:
                     "entity": CardDTO.file_upload_schema.dump(upload)
                 }),
                 namespace="/board",
-                to=f"board-{card.board_id}"
+                to=f"card-{card.id}"
             )
             socketio.emit(
                 SIOEvent.CARD_ACTIVITY.value,
@@ -925,7 +925,7 @@ class CardFileUploadService:
                 SIOEvent.FILE_DELETE.value,
                 sio_event,
                 namespace="/board",
-                to=f"board-{upload.board_id}"
+                to=f"card-{upload.card_id}"
             )
             socketio.emit(
                 SIOEvent.CARD_ACTIVITY.value,
