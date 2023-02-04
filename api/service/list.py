@@ -3,6 +3,8 @@ import typing
 import json
 from datetime import datetime
 from werkzeug.exceptions import Forbidden
+from marshmallow.exceptions import ValidationError
+
 from api.app import db, socketio
 from api.model import BoardPermission, BoardActivityEvent
 from api.model.user import User
@@ -157,7 +159,7 @@ class ListService:
         )
 
     def patch(self, current_user: User, list_id: int, data: dict) -> BoardList:
-        board_list = BoardList.get_or_404(list_id)
+        board_list: BoardList = BoardList.get_or_404(list_id)
         current_member = BoardAllowedUser.get_by_usr_or_403(
             board_list.board_id, current_user.id)
         if current_member.has_permission(BoardPermission.LIST_EDIT):
@@ -168,6 +170,11 @@ class ListService:
                     self.archive_list(current_member, board_list)
                 else:
                     self.revert_list(current_member, board_list)
+            if board_list.wip_limit != data.get("wip_limit", board_list.wip_limit):
+                # Check if the WIP limit reached with the new value
+                if data.get("wip_limit") < len(board_list.cards):
+                    raise ValidationError(
+                        {"wip_limit": "WIP limit cannot be lower than already assigned cards count to this list!"})
 
             board_list.update(**data)
 
