@@ -170,6 +170,7 @@ class ListService:
                     self.archive_list(current_member, board_list)
                 else:
                     self.revert_list(current_member, board_list)
+
             if board_list.wip_limit != data.get("wip_limit", board_list.wip_limit):
                 # Check if the WIP limit reached with the new value
                 if data.get("wip_limit") < len(board_list.cards):
@@ -196,14 +197,14 @@ class ListService:
                         )
                     )
                 )
-                db.session.commit()
 
-                socketio.emit(
-                    SIOEvent.LIST_UPDATE.value,
-                    ListDTO.update_list_schema.dump(board_list),
-                    namespace="/board",
-                    to=f"board-{board_list.board_id}"
-                )
+            socketio.emit(
+                SIOEvent.LIST_UPDATE.value,
+                ListDTO.update_list_schema.dump(board_list),
+                namespace="/board",
+                to=f"board-{board_list.board_id}"
+            )
+            db.session.commit()
             return board_list
         raise Forbidden()
 
