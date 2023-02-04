@@ -113,12 +113,30 @@ Before we go into beta phase, need to implement these functions:
 
 And of course fix all the bugs :-)
 
-# Screenshots
+# For developers
 
-**Screenshots from:** 2022.12.25 Alpha
+## Create environment
 
-Board
-![Board](/screenshots/screenshot_board.png)
+```bash
+virtualenv venv
+source venv/bin/activate
+pip install -r REQUIREMENTS.txt
+```
 
-Card
-![Card](/screenshots/screenshot_card.png)
+## Run development Flask server
+
+```bash
+export FLASK_APP=run.py
+export FLASK_ENV=development
+export FLASK_DEBUG=1
+pyhton3 run.py
+```
+
+## Run celery worker
+
+```bash
+export FLASK_APP=run.py
+export FLASK_ENV=development
+export FLASK_DEBUG=1
+celery -A run.celery worker -l info -c 4 -n my_worker -E
+```

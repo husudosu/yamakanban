@@ -65,3 +65,18 @@ class Config:
     DATA_DIR = os.environ.get("DATA_DIR", "/root/data")
     USER_UPLOAD_DIR = os.path.join(DATA_DIR, "user_uploads")
     MAX_CONTENT_LENGTH = 30 * 1000 * 1000
+
+    REDIS_HOST = os.environ.get("REDIS_HOST", "localhost")
+    REDIS_PORT = os.environ.get("REDIS_PORT", 6379)
+    CELERY_CONFIG = {
+        "broker_url": f"redis://{REDIS_HOST}:{REDIS_PORT}/0",
+        "result_backend": f"redis://{REDIS_HOST}:{REDIS_PORT}/0",
+        "enable_utc": True,
+        "task_serializer": "json",
+        "result_serializer": "json",
+        "result_extended": True,
+        "accept_content": ["json"],
+        "result_expires": timedelta(days=365),
+        "include": [
+        ]
+    }

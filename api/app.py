@@ -1,28 +1,24 @@
+import json
 import os
 import traceback
+from datetime import datetime, timedelta, timezone
+
 import click
-from datetime import datetime, timezone, timedelta
-
-from werkzeug.exceptions import HTTPException
-import json
-
 import sqlalchemy as sqla
-from flask import Blueprint, Flask, Response, make_response, jsonify
+from celery import Celery
+from flask import Blueprint, Flask, Response, jsonify, make_response
 from flask.cli import AppGroup
-
-from flask_cors import CORS
-from flask_sqlalchemy import SQLAlchemy
-from flask_migrate import Migrate
-from flask_jwt_extended import (
-    JWTManager, get_jwt, create_access_token, set_access_cookies,
-    current_user, unset_jwt_cookies
-)
-from jwt import ExpiredSignatureError
-from flask_mail import Mail
 from flask_compress import Compress
+from flask_cors import CORS
+from flask_jwt_extended import (JWTManager, create_access_token, current_user,
+                                get_jwt, set_access_cookies, unset_jwt_cookies)
+from flask_mail import Mail
+from flask_migrate import Migrate
 from flask_socketio import SocketIO
-
+from flask_sqlalchemy import SQLAlchemy
+from jwt import ExpiredSignatureError
 from marshmallow.exceptions import ValidationError
+from werkzeug.exceptions import HTTPException
 from werkzeug.middleware.profiler import ProfilerMiddleware
 
 from config import Config
@@ -35,6 +31,7 @@ jwt = JWTManager()
 mail = Mail()
 compress = Compress()
 socketio = SocketIO()
+celery = Celery(__name__)
 
 
 def create_app() -> Flask:
@@ -66,11 +63,11 @@ def create_app() -> Flask:
     # Create the API base blueprint
     api_bp = Blueprint("api_bp", __name__, url_prefix="/api/v1",
                        static_folder="static")
-    from .controller.user_bp import user_bp
     from .controller.board_bp import board_bp
-    from .controller.list_bp import list_bp
     from .controller.card_bp import card_bp
     from .controller.checklist_bp import checklist_bp
+    from .controller.list_bp import list_bp
+    from .controller.user_bp import user_bp
 
     api_bp.register_blueprint(user_bp)
     api_bp.register_blueprint(board_bp)
@@ -221,8 +218,8 @@ def create_app() -> Flask:
     @click.argument("boardid")
     @click.argument("count")
     def create_list(userid: int, boardid: int, count: int):
-        from api.model.user import User
         from api.model.board import Board
+        from api.model.user import User
         from api.util.factory import create_list
         usr = User.query.get(userid)
         if not usr:
@@ -239,8 +236,8 @@ def create_app() -> Flask:
     @click.argument("boardlistid")
     @click.argument("count")
     def create_card(userid: int, boardlistid: int, count: int):
-        from api.model.user import User
         from api.model.list import BoardList
+        from api.model.user import User
         from api.util.factory import create_card
         usr = User.query.get(userid)
         if not usr:
@@ -259,8 +256,8 @@ def create_app() -> Flask:
     @click.argument("cardid")
     @click.argument("count")
     def crete_comment(userid: int, cardid: int, count: int):
-        from api.model.user import User
         from api.model.card import Card
+        from api.model.user import User
         from api.util.factory import create_comment
         usr = User.query.get(userid)
         if not usr:
@@ -284,4 +281,16 @@ def create_app() -> Flask:
     from api.socket import BoardNamespace
 
     socketio.on_namespace(BoardNamespace("/board"))
+
     return app
+
+
+def configure_celery(app):
+    celery.conf.update(app.config["CELERY_CONFIG"])
+
+    class ContextTask(celery.Task):
+        def __call__(self, *args, **kwargs):
+            with app.app_context():
+                return self.run(*args, **kwargs)
+
+    celery.Task = ContextTask
