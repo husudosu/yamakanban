@@ -27,6 +27,7 @@ from werkzeug.middleware.profiler import ProfilerMiddleware
 
 from config import Config
 
+# TODO: investigate if disabling autoflush has a performance impact
 db = SQLAlchemy(session_options={"autoflush": False})
 migrate = Migrate()
 cors = CORS()

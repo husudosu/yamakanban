@@ -27,12 +27,8 @@ class ListService:
         # Load cards into lists.
         lists = []
         for li in board.lists:
-            li.cards = Card.query.filter(
-                sqla.and_(
-                    Card.list_id == li.id,
-                    Card.archived == False
-                )
-            ).order_by(Card.position.asc()).all()
+            li.populate_listcards()
+            # self.populate_listcards(li)
         return lists
 
     def post(self, current_user: User, board_id: int, data: dict) -> BoardList:
@@ -160,22 +156,27 @@ class ListService:
 
     def patch(self, current_user: User, list_id: int, data: dict) -> BoardList:
         board_list: BoardList = BoardList.get_or_404(list_id)
+
         current_member = BoardAllowedUser.get_by_usr_or_403(
             board_list.board_id, current_user.id)
+
+        # self.populate_listcards(board_list)
+        board_list.populate_listcards()
+
         if current_member.has_permission(BoardPermission.LIST_EDIT):
             old_title = board_list.title
-
-            if board_list.archived != data.get("archived", board_list.archived):
-                if data["archived"]:
-                    self.archive_list(current_member, board_list)
-                else:
-                    self.revert_list(current_member, board_list)
 
             if board_list.wip_limit != data.get("wip_limit", board_list.wip_limit):
                 # Check if the WIP limit reached with the new value
                 if data["wip_limit"] < len(board_list.cards) and data["wip_limit"] != -1:
                     raise ValidationError(
                         {"wip_limit": "WIP limit cannot be lower than already assigned cards count to this list!"})
+
+            if board_list.archived != data.get("archived", board_list.archived):
+                if data["archived"]:
+                    self.archive_list(current_member, board_list)
+                else:
+                    self.revert_list(current_member, board_list)
 
             board_list.update(**data)
 

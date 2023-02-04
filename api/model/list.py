@@ -3,6 +3,7 @@ import sqlalchemy.orm as sqla_orm
 
 from api.app import db
 from . import BaseMixin
+from api.model.card import Card
 
 
 class BoardList(db.Model, BaseMixin):
@@ -22,5 +23,19 @@ class BoardList(db.Model, BaseMixin):
     board = sqla_orm.relationship("Board", back_populates="lists")
     cards = sqla_orm.relationship(
         "Card",
-        back_populates="board_list"
+        back_populates="board_list",
+        lazy="noload"
     )
+
+    def populate_listcards(self, archived: bool = False):
+        """Loads cards of the list.
+
+        Args:
+            archived (bool, optional): Should we load archived cards? Defaults to False.
+        """
+        self.cards = Card.query.filter(
+            sqla.and_(
+                Card.list_id == self.id,
+                Card.archived == archived
+            )
+        ).order_by(Card.position.asc()).all()

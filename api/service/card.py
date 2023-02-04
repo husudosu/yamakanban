@@ -210,12 +210,12 @@ class CardService:
                     # Get target list id
                     target_list: BoardList = BoardList.get_or_404(value)
 
-
                     if target_list.board_id != card.board_id:
                         raise ValidationError(
                             {"list_id": ["Cannot move card to other board!"]})
 
                     # Check target list WIP limit
+                    target_list.populate_listcards()
                     if len(target_list.cards) == target_list.wip_limit:
                         raise ValidationError(
                             {"list_id": ["Target list WIP limit reached!"]}
@@ -245,6 +245,14 @@ class CardService:
                     activities.append(activity)
                 elif key == "archived" and card.archived != value:
                     if value is False:
+
+                        # Check target list WIP limit.
+                        card.board_list.populate_listcards()
+
+                        if len(card.board_list.cards) == card.board_list.wip_limit:
+                            raise ValidationError(
+                                {"archived": "You can't restore card because on the target list the WIP limit reached!"})
+
                         activity = BoardActivity(
                             card_id=card.id,
                             board_id=card.board_id,
