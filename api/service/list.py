@@ -173,7 +173,7 @@ class ListService:
 
             if board_list.wip_limit != data.get("wip_limit", board_list.wip_limit):
                 # Check if the WIP limit reached with the new value
-                if data.get("wip_limit") < len(board_list.cards):
+                if data["wip_limit"] < len(board_list.cards) and data["wip_limit"] != -1:
                     raise ValidationError(
                         {"wip_limit": "WIP limit cannot be lower than already assigned cards count to this list!"})
 
