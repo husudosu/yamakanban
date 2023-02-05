@@ -11,6 +11,13 @@ services:
             - "production.env"
         ports:
             - "5432:5432"
+    yamakanban_redis:
+        image: redis
+        hostname: "yamakanban_redis"
+        ports: 
+            - "6379:6379"
+        volumes:
+            - redis_cache:/data
     yamakanban:
         restart: unless-stopped
         command: ./boot.sh
@@ -28,10 +35,14 @@ services:
             - "443:443"
         depends_on:
             - yamakanban_db
+            - yamakanban_redis
         links:
             - yamakanban_db
+            - yamakanban_redis
 volumes:
     sql:
         driver: local
     yamakanban_data:
+        driver: local
+    redis_cache:
         driver: local
