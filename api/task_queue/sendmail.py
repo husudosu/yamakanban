@@ -4,8 +4,8 @@ from api.app import celery
 
 
 @celery.task(bind=True)
-def send_mail(self, from_address, to_address, subject, html):
-    print("Celery JOB running")
+def send_mail(self, from_address: str, to_address: str, subject: str, html: str, text: str):
     msg = Message(subject, sender=from_address, recipients=[to_address])
     msg.html = html
+    msg.body = text
     mail.send(msg)

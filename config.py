@@ -78,5 +78,6 @@ class Config:
         "accept_content": ["json"],
         "result_expires": timedelta(days=365),
         "include": [
+            "api.task_queue.sendmail"
         ]
     }

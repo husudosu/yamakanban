@@ -9,10 +9,11 @@ from flask_jwt_extended import (
     unset_jwt_cookies
 )
 from datetime import timedelta
-
+import sqlalchemy as sqla
 from api.app import db
 from api.util.dto import UserDTO
 from api.model.user import User, Token
+from api.task_queue.sendmail import send_mail
 
 
 user_bp = Blueprint("user_bp", __name__, url_prefix="/auth")
@@ -130,16 +131,78 @@ class ForgotPasswordAPI(MethodView):
             identity=usr,
             expires_delta=current_app.config["RESET_PASSWORD_TOKEN_EXPIRES"]
         )
-        # send_async_email(
-        #     subject="Reset password requested",
-        #     sender="husudosu94@gmail.com",
-        #     recipients=[usr.email],
-        #     text_body=render_template(
-        #         "forgot_password.txt", reset_token=reset_token),
-        #     html_body=render_template(
-        #         "forgot_password.html", reset_token=reset_token)
-        # )
+        reset_token_decoded = decode_token(reset_token)
+        db.session.add(
+            Token(
+                user_id=usr.id,
+                jti=reset_token_decoded["jti"],
+                type=reset_token_decoded["type"],
+                created_at=datetime.now()
+            )
+        )
+        db.session.commit()
+        send_mail.delay(
+            current_app.config["MAIL_DEFAULT_SENDER"],
+            usr.email,
+            "Yamakanban: Reset password request",
+            render_template("auth/forgot_password.html",
+                            reset_token=reset_token),
+            render_template("auth/forgot_password.txt",
+                            reset_token=reset_token)
+        )
         return {"message": "Check your inbox."}
+
+
+class ResetPasswordAPI(MethodView):
+    decorators = [jwt_required(optional=True)]
+
+    def check_if_token_expired(self):
+        decoded_token = decode_token(request.args["reset_token"])
+        # Check if token already expired
+        is_in_blocklist = Token.query.filter(
+            sqla.and_(
+                Token.jti == decoded_token["jti"],
+                Token.revoked == True
+            )
+        ).first()
+
+        if is_in_blocklist:
+            raise abort(403, "Invalid token. Expired or already used.")
+
+    def get(self):
+        if current_user:
+            abort(400, "You already logged in!")
+        if not request.args.get("reset_token"):
+            abort(400, "Reset token missing!")
+
+        self.check_if_token_expired()
+        return render_template("auth/reset_password.html")
+
+    def post(self):
+        """
+        Create ResetPassword.
+        """
+        decoded_token = decode_token(request.args["reset_token"])
+
+        # Check if expired
+        self.check_if_token_expired()
+
+        usr = User.query.get(decoded_token["sub"])
+        usr.update(password=request.form["newPassword"])
+
+        Token.query.filter(
+            Token.jti == decoded_token["jti"]
+        ).update({"revoked": True})
+        # db.session.add(
+        #     Token(
+        #         jti=decoded_token["jti"],
+        #         created_at=datetime.now(),
+        #         revoked=True
+        #     )
+        # )
+        db.session.commit()
+
+        return "Password has been changed."
 
 
 class UserAPI(MethodView):
@@ -265,7 +328,7 @@ user_view = UserAPI.as_view("user-view")
 logout_view = LogoutAPI.as_view("logout-view")
 refreshtoken_view = RefreshTokenAPI.as_view("refreshtoken-view")
 finduser_view = FindUserAPI.as_view("finduser-view")
-
+resetpassword_view = ResetPasswordAPI.as_view("resetpassword-view")
 
 user_bp.add_url_rule("/login", view_func=login_view, methods=["POST"])
 user_bp.add_url_rule("/register", view_func=register_view, methods=["POST"])
@@ -276,3 +339,5 @@ user_bp.add_url_rule("/users/<id>", view_func=user_view,
 user_bp.add_url_rule("/logout", view_func=logout_view, methods=["POST"])
 user_bp.add_url_rule("/refresh", view_func=refreshtoken_view, methods=["POST"])
 user_bp.add_url_rule("/find-user", view_func=finduser_view, methods=["POST"])
+user_bp.add_url_rule(
+    "/reset-password", view_func=resetpassword_view, methods=["GET", "POST"])
