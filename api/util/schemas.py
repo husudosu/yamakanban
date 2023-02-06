@@ -142,6 +142,12 @@ class BoardListSchema(SQLAlchemySchema):
     archived_on = fields.DateTime("%Y-%m-%d %H:%M:%S", dump_only=True)
     wip_limit = fields.Integer(allow_none=False)
 
+    # TODO: Color validation.
+    header_bgcolor = fields.String(allow_none=True)
+    header_textcolor = fields.String(allow_none=True)
+    list_bgcolor = fields.String(allow_none=True)
+    list_textcolor = fields.String(allow_none=True)
+
     cards = fields.Nested(
         lambda: CardSchema,
         many=True,

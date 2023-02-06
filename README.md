@@ -109,9 +109,8 @@ Before we go into beta phase, need to implement these functions:
 -   [ ] Make better user experience,
 -   [ ] Notify users about new versions on frontend,
 -   [ ] Better smartphone support,
--   [ ] Refactor code both on backend and frontend. Create API documentation.
-
-And of course fix all the bugs :-)
+-   [ ] Refactor code both on backend and frontend. Create API documentation (Swagger).
+-   [ ] Support for CRM systems currently UCRM/UNMS/UISP support planned.
 
 # For developers
 

@@ -20,6 +20,11 @@ class BoardList(db.Model, BaseMixin):
     wip_limit = sqla.Column(sqla.Integer, nullable=False,
                             server_default="-1", default=0)
 
+    header_bgcolor = sqla.Column(sqla.String)
+    header_textcolor = sqla.Column(sqla.String)
+    list_bgcolor = sqla.Column(sqla.String)
+    list_textcolor = sqla.Column(sqla.String)
+
     board = sqla_orm.relationship("Board", back_populates="lists")
     cards = sqla_orm.relationship(
         "Card",
