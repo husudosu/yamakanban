@@ -17,6 +17,8 @@ Yamakanban is a self-hosted kanban style board system. You can run on your own s
 -   Archive your boards and cards and restore them later or delete them permanently.
 -   Check out board activities including all events
 -   See most of activities without refreshing your browser.
+-   WIP (Work In Progress) limit for lists
+-   Set custom color for lists
 
 # Setup
 
