@@ -103,6 +103,7 @@ Be sure you running on the most recent version of the project! For reporting iss
 Before we go into beta phase, need to implement these functions:
 
 -   [ ] Do unit tests (already existing unit tests are very old.)
+-   [ ] Refactor code both on backend and frontend. Create API documentation (Swagger).
 -   [ ] E-mail notification system
     -   [ ] You've been assigned to card/checklsit item,
     -   [ ] Date notification for assigned users (created, due date near, expired, date have been changed),
@@ -111,8 +112,19 @@ Before we go into beta phase, need to implement these functions:
 -   [ ] Make better user experience,
 -   [ ] Notify users about new versions on frontend,
 -   [ ] Better smartphone support,
--   [ ] Refactor code both on backend and frontend. Create API documentation (Swagger).
 -   [ ] Support for CRM systems currently UCRM/UNMS/UISP support planned.
+
+# Screenshots
+
+Screenshots made on 2023.02.08
+
+![Board view](/screenshots/board.png)
+
+![Board activties view](/screenshots/boardactivities.png)
+
+![Card view](/screenshots/card.png)
+
+![Card history view](/screenshots/cardhistory.png)
 
 # For developers
 
@@ -141,3 +153,7 @@ export FLASK_ENV=development
 export FLASK_DEBUG=1
 celery -A run.celery worker -l info -c 4 -n my_worker -E
 ```
+
+# Used FOSS stuff
+
+The board background image came from [linuxdotexe/nordic-wallpapers](https://github.com/linuxdotexe/nordic-wallpapers)
