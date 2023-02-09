@@ -73,8 +73,6 @@ class CardActivityEvent(enum.Enum):
     CHECKLIST_UPDATE = "checklist.update"
     CHECKLIST_DELETE = "checklist.delete"
     CHECKLIST_ITEM_MARKED = "checklist.item.marked"
-    CHECKLIST_ITEM_DUE_DATE = "checklist.item.due_date"
-    CHECKLIST_ITEM_USER_ASSIGN = "checklist.item.user_assign"
 
     CARD_ASSIGN_MEMBER = "card.member.assign"
     CARD_DEASSIGN_MEMBER = "card.member.deassign"

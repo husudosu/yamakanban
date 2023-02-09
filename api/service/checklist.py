@@ -158,20 +158,11 @@ class ChecklistItemService:
 
         if current_member.has_permission(BoardPermission.CHECKLIST_EDIT):
             errors = {}
-            assigned_user = None
 
             # Validate some SQL sutff if required.
             if data.get("marked_complete_board_user_id"):
                 if not checklist.board.get_board_user(data["marked_complete_board_user_id"]):
                     errors["marked_complete_board_user_id"] = [
-                        "User not exists or not member of board!"]
-
-            if data.get("assigned_board_user_id"):
-                assigned_user = checklist.board.get_board_user(
-                    data["assigned_board_user_id"])
-
-                if not assigned_user:
-                    errors["assigned_board_user_id"] = [
                         "User not exists or not member of board!"]
 
             if len(errors.keys()) > 0:
@@ -190,7 +181,6 @@ class ChecklistItemService:
                 item.position = position_max[0] + 1
 
             checklist.items.append(item)
-            # TODO Send Email notification for assigned user
             # TODO: Create activity objects.
             db.session.commit()
 
@@ -249,49 +239,6 @@ class ChecklistItemService:
             else:
                 item.marked_complete_board_user_id = None
                 item.marked_complete_on = None
-        if (
-            data.get("assigned_board_user_id") is not None and
-            data["assigned_board_user_id"] != item.assigned_board_user_id
-        ):
-            activity = BoardActivity(
-                card_id=item.checklist.card_id,
-                board_id=item.board_id,
-                board_user_id=current_member.id,
-                event=CardActivityEvent.CHECKLIST_ITEM_USER_ASSIGN.value,
-                entity_id=item.id,
-                changes=json.dumps(
-                    {
-                        "to": {
-                            "board_user_id": data["assigned_board_user_id"]
-                        }
-                    }
-                )
-            )
-            item.checklist.card.activities.append(activity)
-            activities.append(activity)
-        if (
-            data.get("due_date") is not None and
-            data["due_date"] != item.due_date
-        ):
-            activity = BoardActivity(
-                card_id=item.checklist.card_id,
-                board_id=item.board_id,
-                board_user_id=current_member.id,
-                event=CardActivityEvent.CHECKLIST_ITEM_DUE_DATE.value,
-                entity_id=item.id,
-                changes=json.dumps(
-                    {
-                        "from": {
-                            "due_date": item.due_date.strftime("%Y-%m-%d %H:%M:%S") if item.due_date else ""
-                        },
-                        "to": {
-                            "due_date": data["due_date"].strftime("%Y-%m-%d %H:%M:%S")
-                        }
-                    }
-                )
-            )
-            item.checklist.card.activities.append(activity)
-            activities.append(activity)
         return activities
 
     def patch(self, current_user: User, item_id: int, data: dict) -> ChecklistItem:
@@ -307,9 +254,6 @@ class ChecklistItemService:
             if data.get("marked_complete_board_user_id"):
                 BoardAllowedUser.get_or_404(
                     data["marked_complete_board_user_id"])
-
-            if data.get("assigned_board_user_id"):
-                BoardAllowedUser.get_or_404(data["assigned_board_user_id"])
 
             activities = self.checklist_item_process_changes(
                 current_member, item, data)

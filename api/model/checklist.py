@@ -13,16 +13,11 @@ class ChecklistItem(db.Model, BaseMixin):
         sqla.Integer, sqla.ForeignKey("card_checklist.id", ondelete="CASCADE"))
     marked_complete_board_user_id = sqla.Column(
         sqla.Integer, sqla.ForeignKey("board_allowed_user.id", ondelete="CASCADE"))
-    assigned_board_user_id = sqla.Column(
-        sqla.Integer, sqla.ForeignKey(
-            "board_allowed_user.id", ondelete="CASCADE")
-    )
     board_id = sqla.Column(
         sqla.Integer, sqla.ForeignKey("board.id", ondelete="CASCADE"), nullable=False
     )
 
     title = sqla.Column(sqla.Text)
-    due_date = sqla.Column(sqla.DateTime)
     completed = sqla.Column(sqla.Boolean, default=False, nullable=False)
     marked_complete_on = sqla.Column(sqla.DateTime)
     position = sqla.Column(sqla.SmallInteger, default=0)
@@ -31,9 +26,6 @@ class ChecklistItem(db.Model, BaseMixin):
     checklist = sqla_orm.relationship("CardChecklist", back_populates="items")
     marked_complete_user = sqla_orm.relationship(
         "BoardAllowedUser", foreign_keys=[marked_complete_board_user_id], uselist=False)
-    assigned_user = sqla_orm.relationship(
-        "BoardAllowedUser", foreign_keys=[assigned_board_user_id], uselist=False
-    )
 
 
 class CardChecklist(db.Model, BaseMixin):

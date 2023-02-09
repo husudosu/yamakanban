@@ -293,19 +293,13 @@ class ChecklistItemSchema(SQLAlchemySchema):
     id = fields.Integer(dump_only=True)
     checklist_id = fields.Integer(dump_only=True)
     marked_complete_board_user_id = fields.Integer(dump_only=True)
-    assigned_board_user_id = fields.Integer(allow_none=True)
 
     title = fields.String(required=True)
-    due_date = fields.DateTime("%Y-%m-%d %H:%M:%S", allow_none=True)
     completed = fields.Boolean(load_default=False, allow_none=False)
     marked_complete_on = fields.DateTime(dump_only=True)
     position = fields.Integer()
 
     marked_complete_user = fields.Nested(
-        BoardAllowedUserSchema(only=("user", "id",)),
-        dump_only=True
-    )
-    assigned_user = fields.Nested(
         BoardAllowedUserSchema(only=("user", "id",)),
         dump_only=True
     )
