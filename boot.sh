@@ -1,7 +1,6 @@
 #!/usr/bin/env bash
 
 cd /root/
-flask db upgrade
 
 mkdir -p /root/data
 mkdir -p /root/data/log
@@ -12,7 +11,10 @@ else
     DB_PORT="${POSTGRES_PORT}"
 fi
 
+# Wait for PostgreSQL server.
 while ! nc -z "${POSTGRES_HOST}" "${DB_PORT}"; do sleep 1; done;
 
-echo "Start supervisord"
+# Run migration scripts.
+flask db upgrade
+
 exec supervisord -c /root/supervisord.conf

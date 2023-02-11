@@ -2,7 +2,11 @@
 
 Yamakanban is a self-hosted kanban style board system. You can run on your own server withtout a big hassle.
 
-**_This is an Alpha version!You can experience lot of issues, some features missing. Check out Roadmap for planned features._**
+**This is an Alpha version! You can experience lot of issues, some features missing.**
+
+### Developer note
+
+**The initial motive behind this project to build a proper portfolio project to represent my knowledge, but I've overgrown that idea. I want to build a full project management solution. So the Kanban board management only will be a single feature. Check out Roadmap for planned features.**
 
 # Features
 
@@ -53,6 +57,7 @@ After cloning is done, you have to create a production.env, you could copy sampl
 | **MAIL_PASSWORD**       | Mail password                                                            |                    | N/A           |
 | **MAIL_DEFAULT_SENDER** | Mail default sender                                                      |                    | N/A           |
 | **PROFILER_ENABLED**    | Profiler useful for developers. Disabled by default                      |                    | 0             |
+| **DATA_DIR**            | Data directory, change this if you want to debug the project.            |                    | /root/data    |
 
 ### Generate secure key
 
@@ -103,7 +108,8 @@ Be sure you running on the most recent version of the project! For reporting iss
 Before we go into beta phase, need to implement these functions:
 
 -   [ ] Do unit tests (already existing unit tests are very old.)
--   [ ] Refactor code both on backend and frontend. Create API documentation (Swagger).
+-   [ ] Refactor code both on backend and frontend,
+-   [ ] Create API documentation (Swagger),
 -   [ ] E-mail notification system
     -   [ ] You've been assigned to card/checklsit item,
     -   [ ] Date notification for assigned users (created, due date near, expired, date have been changed),
@@ -112,11 +118,15 @@ Before we go into beta phase, need to implement these functions:
 -   [ ] Make better user experience,
 -   [ ] Notify users about new versions on frontend,
 -   [ ] Better smartphone support,
--   [ ] Support for CRM systems currently UCRM/UNMS/UISP support planned.
+-   [ ] Support for system CRM currently UISP planned,
+-   [ ] Ticket management,
+-   [ ] Create pool of tasks function on kanban board,
+-   [ ] Task scheduler,
+-   [ ] Calendar view for tasks
 
 # Screenshots
 
-Screenshots made on 2023.02.08
+Screenshots made on 2023.02.11
 
 ![Board view](/screenshots/board.png)
 
@@ -136,7 +146,7 @@ source venv/bin/activate
 pip install -r REQUIREMENTS.txt
 ```
 
-## Run development Flask server
+## Run development Flask + Socket.IO server
 
 ```bash
 export FLASK_APP=run.py
