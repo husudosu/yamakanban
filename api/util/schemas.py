@@ -423,7 +423,3 @@ class SIOChecklistItemDeleteSchema(SIODeleteEventSchema):
 
 class SIOCheckListEventSchema(SIOEventSchema):
     checklist_id = fields.Integer()
-
-
-class ArchivedEntititiesQuerySchema(Schema):
-    entity_type = fields.String(validate=validate.OneOf(("card", "list",)))

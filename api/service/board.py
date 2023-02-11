@@ -1,9 +1,11 @@
 import os
 import shutil
 
-from typing import List
+from typing import List, Union
 from datetime import datetime
 from flask import current_app
+from flask_sqlalchemy import Pagination
+
 import json
 import typing
 import sqlalchemy as sqla
@@ -29,10 +31,10 @@ class BoardService:
         """Gets accessible non-archived user boards. 
 
         Args:
-            current_user (User): _description_
+            current_user (User): Current logged in user.
 
         Returns:
-            List[Board]: _description_
+            List[Board]: Collection of boards which accessible for user
         """
         return [
             entry.board for entry in BoardAllowedUser.query.filter(
@@ -45,7 +47,16 @@ class BoardService:
             ).options(sqla_orm.load_only(BoardAllowedUser.id)).all()
         ]
 
-    def get(self, current_user: User, board_id: int = None) -> Board:
+    def get(self, current_user: User, board_id: int) -> Board:
+        """Gets single board lists and cards if the user has permission.
+
+        Args:
+            current_user (User): Current logged in user
+            board_id (int): Board to get.
+
+        Returns:
+            Board: Board populated with non-archived lists, cards
+        """
         board = Board.get_or_404(board_id)
         BoardAllowedUser.get_by_usr_or_403(board_id, current_user.id)
 
@@ -67,7 +78,17 @@ class BoardService:
             ).order_by(Card.position.asc()).all()
         return board
 
-    def get_board_activities(self, current_user: User, board_id: int, args: dict):
+    def get_board_activities(self, current_user: User, board_id: int, args: dict) -> Pagination:
+        """Get activities for board.
+
+        Args:
+            current_user (User): Current logged in user
+            board_id (int): Get activities for this board id
+            args (dict): Query arguments from request.
+
+        Returns:
+            _type_: _description_
+        """
         # TODO: This is almost full duplicate of Card service->get_activities method. Need refactor here!
         Board.get_or_404(board_id)
         BoardAllowedUser.get_by_usr_or_403(board_id, current_user.id)
@@ -111,30 +132,50 @@ class BoardService:
 
         return query.paginate(args["page"], args["per_page"])
 
-    def get_archived_entitities(self, current_user: User, board_id: int, args: dict):
-        entity_type = args.get("entity_type")
+    def get_archived_cards(self, current_user: User, board_id: int) -> List[Card]:
+        """Gets archived cards
+
+        Args:
+            current_user (User): Current logged in user.
+            board_id (int): Board id.
+
+        Returns:
+            List[Card]: Archived cards for board.
+        """
         Board.get_or_404(board_id)
         BoardAllowedUser.get_by_usr_or_403(board_id, current_user.id)
-        match entity_type:
-            case "card":
-                return Card.query.filter(
-                    sqla.and_(
-                        Card.board_id == board_id,
-                        sqla.or_(
-                            Card.archived == True,
-                            Card.archived_by_list == True
-                        )
-                    )
-                ).order_by(Card.archived_on.desc()).all()
-            case "list":
-                return BoardList.query.filter(
-                    sqla.and_(
-                        BoardList.board_id == board_id,
-                        BoardList.archived == True
-                    )
-                ).options(
-                    sqla_orm.joinedload(BoardList.cards)
-                ).order_by(BoardList.archived_on.desc()).all()
+
+        return Card.query.filter(
+            sqla.and_(
+                Card.board_id == board_id,
+                sqla.or_(
+                    Card.archived == True,
+                    Card.archived_by_list == True
+                )
+            )
+        ).order_by(Card.archived_on.desc()).all()
+
+    def get_archived_lists(self, current_user: User, board_id: int) -> List[BoardList]:
+        """Get archived lists for board.
+
+        Args:
+            current_user (User): Current logged in user
+            board_id (int): Board id
+
+        Returns:
+            List[BoardList]: Archived lists for board.
+        """
+        Board.get_or_404(board_id)
+        BoardAllowedUser.get_by_usr_or_403(board_id, current_user.id)
+
+        return BoardList.query.filter(
+            sqla.and_(
+                BoardList.board_id == board_id,
+                BoardList.archived == True
+            )
+        ).options(
+            sqla_orm.joinedload(BoardList.cards)
+        ).order_by(BoardList.archived_on.desc()).all()
 
     def post(self, current_user: User, data: dict) -> Board:
         """Creates a new board
@@ -162,18 +203,18 @@ class BoardService:
         return board
 
     def patch(self, current_user: User, board_id: int, data: dict) -> Board:
-        """Updates a board.
+        """Updates board.
 
         Args:
             current_user (User): Current logged in user
-            board (Board): Board ORM object to update
-            data (dict): update data
+            board_id (int): Board ID to update
+            data (dict): Update data from request
 
         Raises:
-            Forbidden: User has no access to this board
+            Forbidden: Don't have permission to edit boar
 
         Returns:
-            Board: Updated board ORM object
+            Board: Updated board.
         """
         board = Board.get_or_404(board_id)
         current_member: BoardAllowedUser = BoardAllowedUser.get_by_usr_or_403(
@@ -189,6 +230,20 @@ class BoardService:
             )
             return board
         raise Forbidden()
+
+    def delete_board_uploads(self, board_id: int):
+        """Deletes files uploaded for board
+
+        Args:
+            board_id (int): Board id
+        """
+        upload_path = os.path.join(
+            current_app.config["USER_UPLOAD_DIR"],
+            str(board_id)
+        )
+
+        if os.path.exists(upload_path):
+            shutil.rmtree(upload_path)
 
     def delete(self, current_user: User, board_id: int):
         """First archives the board. For the second time deletes board from db.
@@ -224,13 +279,7 @@ class BoardService:
                 )
             else:
                 # We delete files for board
-                upload_path = os.path.join(
-                    current_app.config["USER_UPLOAD_DIR"],
-                    str(board.id)
-                )
-
-                if os.path.exists(upload_path):
-                    shutil.rmtree(upload_path)
+                self.delete_board_uploads(board_id)
 
                 db.session.delete(board)
                 db.session.commit()
@@ -243,7 +292,19 @@ class BoardService:
         else:
             raise Forbidden()
 
-    def revert(self, current_user: User, board_id: int):
+    def revert(self, current_user: User, board_id: int) -> Board:
+        """Reverts specified board
+
+        Args:
+            current_user (User): Current logged in user
+            board_id (int): Board object id to revert.
+
+        Raises:
+            Forbidden: Don't have permission
+
+        Returns:
+            Board: Reverted board.
+        """
         board: Board = Board.get_or_404(board_id)
         current_member = BoardAllowedUser.get_by_usr_or_403(
             board_id, current_user.id)
@@ -273,6 +334,13 @@ class BoardService:
     def update_boardlists_position(
         self, current_user: User, board_id: int, data: typing.List[int]
     ):
+        """Updates position of lists on board.
+
+        Args:
+            current_user (User): Current logged in user
+            board_id (int): Board ID.
+            data (typing.List[int]): List of BoardList ID on the required order.
+        """
         board = Board.get_or_404(board_id)
         BoardAllowedUser.get_by_usr_or_403(board_id, current_user.id)
 
@@ -284,6 +352,7 @@ class BoardService:
                 )
             ).update({"position": index})
         db.session.commit()
+
         socketio.emit(
             SIOEvent.LIST_UPDATE_ORDER.value,
             data,
@@ -291,12 +360,15 @@ class BoardService:
             to=f"board-{board_id}"
         )
 
+
+class BoardMemberManagementService:
+
     def get_board_claims(self, current_user: User, board_id: int) -> BoardAllowedUser:
         """Gets board claims for current_user
 
         Args:
             current_user (User): Current logged in user
-            board (Board): Board ORM object
+            board_id (int): Board ID
 
         Returns:
             BoardAllowedUser: Board allowed user object contains role/permission.
@@ -316,13 +388,13 @@ class BoardService:
 
         Args:
             current_user (User): Current logged in user
-            board (Board): Board
+            board_id (int): Board id
 
         Raises:
             Forbidden: _description_
 
         Returns:
-            typing.List[BoardRole]: _description_
+            typing.List[BoardRole]: List of board roles
         """
         board = Board.get_or_404(board_id)
         BoardAllowedUser.get_by_usr_or_403(
@@ -331,7 +403,17 @@ class BoardService:
 
     def get_member(
         self, current_user: User, board_id: int, user_id: int
-    ) -> typing.Union[BoardAllowedUser, None]:
+    ) -> Union[BoardAllowedUser, None]:
+        """Gets board member
+
+        Args:
+            current_user (User): Current logged in user
+            board_id (int): Board id
+            user_id (int): User id for member.
+
+        Returns:
+            typing.Union[BoardAllowedUser, None]: Member if User already member of board else None
+        """
         board = Board.get_or_404(board_id)
         BoardAllowedUser.get_by_usr_or_403(board_id, current_user.id)
         return board.get_board_user(user_id)
@@ -339,6 +421,15 @@ class BoardService:
     def get_members(
         self, current_user: User, board_id: int
     ) -> typing.List[BoardAllowedUser]:
+        """Get board members
+
+        Args:
+            current_user (User): Current logged-in user 
+            board_id (int): Board id
+
+        Returns:
+            typing.List[BoardAllowedUser]: List of members
+        """
         board = Board.get_or_404(board_id)
         BoardAllowedUser.get_by_usr_or_403(board.id, current_user.id)
         return board.board_users
@@ -347,6 +438,20 @@ class BoardService:
         self, current_user: User, board_id: int,
         new_user_id: int, new_member_role_id: int
     ) -> BoardAllowedUser:
+        """Add new member to board
+
+        Args:
+            current_user (User): Current logged in user
+            board_id (int): Board id
+            new_user_id (int): User id of new member
+            new_member_role_id (int): Desired member role id.
+
+        Raises:
+            Forbidden: Don't have permission to add.
+
+        Returns:
+            BoardAllowedUser: Created member
+        """
         board: Board = Board.get_or_404(board_id)
         current_member = BoardAllowedUser.get_by_usr_or_403(
             board_id, current_user.id)
@@ -393,7 +498,22 @@ class BoardService:
     def update_member_role(
         self, current_user: User, board_id: int,
         user_id: int, role_id: int
-    ):
+    ) -> BoardAllowedUser:
+        """Updates member role
+
+        Args:
+            current_user (User): Current logged in user
+            board_id (int): Board id
+            user_id (int): User id to update
+            role_id (int): Role id to set existing member.
+
+        Raises:
+            ValidationError: _description_
+            Forbidden: _description_
+
+        Returns:
+            BoardAllowedUser: Updated member
+        """
         board = Board.get_or_404(board_id)
         current_member = BoardAllowedUser.get_by_usr_or_403(
             board_id, current_user.id)
@@ -438,6 +558,13 @@ class BoardService:
     def remove_member(
         self, board_id: int, current_user: User, user_id: int
     ):
+        """Remove member from board
+
+        Args:
+            board_id (int): Board id to remove from
+            current_user (User): Current logged in user
+            user_id (int): User id
+        """
         board = Board.get_or_404(board_id)
         current_member = BoardAllowedUser.get_by_usr_or_403(
             board.id, current_user.id)
@@ -489,6 +616,12 @@ class BoardService:
     def activate_member(
         self, current_user: User, member_id: int
     ):
+        """Activate member
+
+        Args:
+            current_user (User): Current logged in user
+            member_id (int): Member id to activate
+        """
         member = BoardAllowedUser.get_or_404(member_id)
         current_member = BoardAllowedUser.get_by_usr_or_403(
             member.board_id, current_user.id)
@@ -513,3 +646,4 @@ class BoardService:
 
 
 board_service = BoardService()
+member_man_service = BoardMemberManagementService()
