@@ -6,7 +6,7 @@ Yamakanban is a self-hosted kanban style board system. You can run on your own s
 
 ### Developer note
 
-**The initial motive behind this project to build a proper portfolio project to represent my knowledge, but I've overgrown that idea. I want to build a full project management solution. So the Kanban board management only will be a single feature. Check out Roadmap for planned features.**
+**The initial motive behind this project were to build a proper portfolio project to represent my knowledge, but I've overgrown that idea. I want to build a full project management solution. So the Kanban board management only will be a single feature. Check out Roadmap for planned features.**
 
 # Features
 
