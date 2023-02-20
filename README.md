@@ -164,6 +164,14 @@ export FLASK_DEBUG=1
 celery -A run.celery worker -l info -c 4 -n my_worker -E
 ```
 
+## Run frontend
+
+```bash
+cd frontend
+npm install
+npm run serve
+```
+
 # Used FOSS stuff
 
 The board background image came from [linuxdotexe/nordic-wallpapers](https://github.com/linuxdotexe/nordic-wallpapers)
